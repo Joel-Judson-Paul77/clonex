@@ -197,7 +197,9 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
         <p className="eyebrow">Step 1 of 3</p>
         <h2 className="mt-2 text-2xl font-semibold leading-[1.15] sm:text-3xl bg-gradient-to-b from-white to-white/55 bg-clip-text text-transparent">Define your official brand assets so CloneX never flags your real accounts.</h2>
         <p className="mt-2 max-w-2xl text-sm text-white/60">Search for your brand and CloneX fills in the name, logo, app IDs, publisher and website from the App Store and Google Play. You can edit anything afterwards.</p>
-        <div className="mt-5 space-y-3">
+        <p className="mt-6 text-base font-semibold text-white">Which brand or app do you want to protect?</p>
+        <p className="mt-1 text-xs text-white/55">Pick one of the popular brands below, or search for yours.</p>
+        <div className="mt-3 space-y-3">
           <BrandSearch onPick={applyBrand} />
           <BrandBubbles onPick={applyBrand} />
         </div>

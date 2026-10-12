@@ -28,17 +28,15 @@ export default function Home() {
   const [entered, setEntered] = useState(false);
   const [formKey, setFormKey] = useState(0); // bumping it remounts the profile form with empty fields
 
-  // Load the saved profile once on mount (localStorage only exists in the browser)
+  // Every visit starts on a blank Step 1 so the user chooses the brand to protect. Anything saved by an earlier
+  // visit (profile, last scan, takedown statuses) is cleared here; it is still kept while the page is open, so
+  // switching between the steps does not lose the current scan.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY);
-      if (raw) {
-        setProfile(JSON.parse(raw));
-        setTab("monitor");
-      }
+      [KEY, LEGACY_KEY, LAST_SCAN_KEY, TAKEDOWNS_KEY].forEach((k) => localStorage.removeItem(k));
     } catch {
-      /* storage unavailable: start empty */
+      /* storage unavailable: nothing to clear */
     }
     try {
       setEntered(sessionStorage.getItem(ENTERED_KEY) === "1");
