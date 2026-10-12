@@ -378,11 +378,20 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
     setLoading(true);
     setError("");
     try {
-      const r = await fetch("/api/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...profileToBrand(profile), simulate }),
-      });
+      const send = () =>
+        fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...profileToBrand(profile), simulate }),
+        });
+      let r: Response;
+      try {
+        r = await send();
+      } catch {
+        // The connection dropped (the server restarted). A scan is read-only, so wait for it to come back and try once more.
+        await new Promise((res) => setTimeout(res, 3000));
+        r = await send();
+      }
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Scan failed");
       setResult(j);
@@ -393,7 +402,7 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
         /* storage full or unavailable: the results still show, they just won't survive a refresh */
       }
     } catch (e) {
-      setError(e instanceof Error && e.message === "Failed to fetch" ? "Lost connection to the CloneX server. Make sure `npm run dev` is still running, then scan again." : e instanceof Error ? e.message : "Scan failed");
+      setError(e instanceof Error && e.message === "Failed to fetch" ? "Lost connection to the CloneX server. Make sure it is still running (`npm run demo`), then scan again." : e instanceof Error ? e.message : "Scan failed");
     } finally {
       setLoading(false);
     }
