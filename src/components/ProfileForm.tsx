@@ -1,7 +1,7 @@
 "use client";
 
 import { NeuroBackdrop } from "@/components/ui/neuro-backdrop";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Zap } from "lucide-react";
 import BrandBubbles from "@/components/BrandBubbles";
 import BrandSearch from "@/components/BrandSearch";
@@ -60,6 +60,9 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
   // which fields were auto-filled from a registry lookup, and where that data came from
   const [auto, setAuto] = useState<AutoInfo | null>(null);
   const [toast, setToast] = useState("");
+  // what the official-channel lookup did, shown at the top of the Verified Channels card
+  const [channelNote, setChannelNote] = useState("");
+  const latestDomain = useRef("");
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
@@ -79,6 +82,35 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
     const icon = res.detail?.iconDataUrl;
     if (res.ok && icon) setP((cur) => (cur.logoDataUrl ? cur : { ...cur, logoDataUrl: icon })); // use the official app icon as the logo
   }, []);
+
+  /** Look up the brand's official YouTube / Telegram / Bluesky accounts, add what is found and verify each one. */
+  const discoverChannels = useCallback(async (domain: string, name: string) => {
+    latestDomain.current = domain;
+    setChannelNote(`Looking for official accounts for ${name}…`);
+    try {
+      const r = await fetch(`/api/discover-channels?domain=${encodeURIComponent(domain)}&name=${encodeURIComponent(name)}`);
+      const j = await r.json();
+      if (latestDomain.current !== domain) return; // the user picked another brand meanwhile
+      if (!r.ok) throw new Error(j.error ?? "lookup failed");
+      const found: Record<HandleKind, string[]> = { youtube: j.found?.youtube ?? [], telegram: j.found?.telegram ?? [], bluesky: j.found?.bluesky ?? [] };
+      const kinds: HandleKind[] = ["youtube", "telegram", "bluesky"];
+      const total = kinds.reduce((n, k) => n + found[k].length, 0);
+      if (!total) {
+        setChannelNote(`No official accounts are published for ${name} on ${domain} or Wikidata. Add yours below.`);
+        return;
+      }
+      setP((cur) => {
+        const handles = { ...cur.handles };
+        for (const k of kinds) handles[k] = [...handles[k], ...found[k].filter((h) => !handles[k].some((x) => x.toLowerCase() === h.toLowerCase()))];
+        return { ...cur, handles };
+      });
+      for (const k of kinds) for (const h of found[k]) runCheck(k, h);
+      const origins = [...new Set(Object.values((j.sources ?? {}) as Record<string, string>))].join(" and ");
+      setChannelNote(`Found ${total} official account${total === 1 ? "" : "s"} (${origins || "found online"}). Check them, and remove any that are not yours.`);
+    } catch {
+      if (latestDomain.current === domain) setChannelNote(`Could not look up official accounts for ${domain}. Add yours below.`);
+    }
+  }, [runCheck]);
 
   const onName = useCallback((v: string) => setP((c) => ({ ...c, name: v })), []);
 
@@ -133,6 +165,8 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
         .filter((d): d is string => !!d)
         .filter((d, i, all) => all.findIndex((x) => x.toLowerCase() === d.toLowerCase()) === i),
       domains: c.domain ? [c.domain] : [],
+      handles: { bluesky: [], telegram: [], youtube: [] },
+      phones: [],
     }));
     setChecks({});
     setError("");
@@ -147,8 +181,13 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
     }
     if (c.ios) runCheck("app-store", c.ios.appId); // also fills publisher + logo if missing
     if (c.android) runCheck("play-store", c.android.pkg);
-    if (c.domain) runCheck("domain", c.domain);
-  }, [flash, runCheck]);
+    if (c.domain) {
+      runCheck("domain", c.domain);
+      discoverChannels(c.domain, c.name);
+    } else {
+      setChannelNote("");
+    }
+  }, [flash, runCheck, discoverChannels]);
 
   const loadDemo = useCallback(() => {
     setP(DEMO_PROFILE);
@@ -159,7 +198,8 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
     DEMO_PROFILE.apps.forEach((a) => runCheck(a.store, a.id));
     DEMO_PROFILE.domains.forEach((d) => runCheck("domain", d));
     DEMO_PROFILE.handles.youtube.forEach((h) => runCheck("youtube", h));
-  }, [runCheck]);
+    discoverChannels(DEMO_PROFILE.domains[0], DEMO_PROFILE.name);
+  }, [runCheck, discoverChannels]);
 
   // ---- per-card badge states: plain strings, so a card re-renders only when its own badge actually changes ----
   const okFor = (kinds: Kind[]) => Object.entries(checks).some(([k, v]) => (v as Check).state === "ok" && kinds.includes(k.split(":")[0] as Kind));
@@ -228,6 +268,7 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
         <VerifiedChannelsCard
           handles={p.handles}
           domains={p.domains}
+          note={channelNote}
           checks={checks}
           onAddHandle={onAddHandle}
           onRemoveHandle={onRemoveHandle}
