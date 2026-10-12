@@ -2,6 +2,8 @@
 
 Brand impersonation monitoring for app stores and social platforms. Kampus.VC hackathon, Challenge 3: *Digital Risk Protection, Social & App Monitoring*.
 
+**Live demo:** https://clonex-murex.vercel.app (takedown runs as a dry run there; nothing is ever sent)
+
 You describe your real brand once. CloneX searches for look-alike apps and accounts, explains each detection in plain language with a 0 to 100 score, never flags your own official assets, and lets an analyst send a reviewed takedown notice through an n8n workflow.
 
 ## Run it
