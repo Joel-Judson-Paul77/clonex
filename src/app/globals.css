@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+:root {
+  --background: #030303;
+  --foreground: #ffffff;
+  --line: rgba(255, 255, 255, 0.1);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "General Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-syne), "General Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--background);
+  /* soft top glow + faint side glow, echoing the dark, lit-from-above look of the reference */
+  background-image:
+    radial-gradient(60% 38% at 50% -8%, rgba(255, 255, 255, 0.1), transparent 70%),
+    radial-gradient(35% 28% at 95% 18%, rgba(255, 255, 255, 0.045), transparent 70%),
+    radial-gradient(35% 28% at 3% 55%, rgba(255, 255, 255, 0.03), transparent 70%);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.025em;
+}
+
+::selection {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* thin, dark scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+/* ---------- shared look ---------- */
+
+/* Near-transparent card, hairline border and a soft light edge along the bottom. */
+.glass-card {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012));
+}
+.glass-card::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  pointer-events: none;
+}
+
+/* Tiny uppercase mono label. */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Touch screens: every button gets at least a 44px tap target. Desktop sizing is unchanged. */
+@media (pointer: coarse) {
+  button {
+    min-height: 44px;
+  }
+  button[aria-label^="Remove"] {
+    min-width: 44px;
+  }
+}
+
+/* Solid white pill with black text. */
+.btn-primary {
+  background: #ffffff;
+  color: #000000;
+  font-weight: 600;
+  border-radius: 9999px;
+  transition: background-color 0.2s, transform 0.1s;
+}
+.btn-primary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.86);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Translucent ghost pill. */
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-radius: 9999px;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Step 1 card row. All open: three equal columns. When some cards are collapsed (and at least one is
+   open), the collapsed ones stack in a slim left rail and the open card(s) run alongside, so there is no
+   empty gap. Driven only by each card's data-open attribute, so cards stay independent. */
+@media (min-width: 1024px) {
+  .step-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .step-grid:has(> [data-open="true"]):has(> [data-open="false"]) {
+    grid-template-columns: minmax(0, 0.6fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+  }
+  .step-grid:has(> [data-open="true"]):has(> [data-open="false"]) > [data-open="false"] {
+    grid-column: 1;
+  }
+  .step-grid:has(> [data-open="true"]):has(> [data-open="false"]) > [data-open="true"] {
+    grid-row: 1 / span 2;
+  }
+  /* exactly one open card: it takes both remaining columns */
+  .step-grid:has(> [data-open="true"]):not(:has(> [data-open="true"] ~ [data-open="true"])):has(> [data-open="false"]) > [data-open="true"] {
+    grid-column: 2 / -1;
+  }
+  /* two open cards: side by side next to the rail */
+  .step-grid:has(> [data-open="true"] ~ [data-open="true"]):has(> [data-open="false"]) > [data-open="true"] {
+    grid-column: 2;
+  }
+  .step-grid:has(> [data-open="true"] ~ [data-open="true"]):has(> [data-open="false"]) > [data-open="true"] ~ [data-open="true"] {
+    grid-column: 3;
+  }
+}

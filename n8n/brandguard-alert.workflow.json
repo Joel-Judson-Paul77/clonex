@@ -1,0 +1,128 @@
+{
+  "name": "BrandGuard - Alert & Takedown Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "brandguard-alert",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "BrandGuard Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 200],
+      "webhookId": "brandguard-alert"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $input.first().json.body ?? $input.first().json;\nconst all = b.findings || [];\nconst urgent = all.filter(f => f.severity === 'critical' || f.severity === 'high');\nconst icon = { critical: '🚨', high: '⚠️', medium: '🔎', low: '•' };\n\nconst lines = urgent.slice(0, 8).map(f =>\n  `${icon[f.severity]} [${f.score}] ${f.name} (${f.platform}${f.source === 'simulated' ? ', simulated' : ''})\\n   ${f.summary}\\n   ${f.url || ''}`\n);\n\nconst message = urgent.length\n  ? `BrandGuard alert for ${b.brand}\\n${urgent.length} high-risk impersonation(s) found of ${b.stats?.flagged ?? all.length} flagged.\\n\\n${lines.join('\\n\\n')}`\n  : `BrandGuard scan for ${b.brand}: no high-risk findings (${b.stats?.flagged ?? 0} low/medium flagged).`;\n\nconst top = urgent[0];\nconst abuseSubject = top ? `Impersonation report: \"${top.name}\" impersonating ${b.brand}` : '';\nconst abuseBody = top\n  ? `Hello Trust & Safety team,\\n\\nWe represent ${b.brand} and are reporting an account/app that impersonates our brand and may be used to defraud customers.\\n\\nReported item: ${top.name}\\nPlatform: ${top.platform}\\nURL: ${top.url}\\nRisk score: ${top.score}/100 (${top.severity})\\nWhy we believe it is impersonation: ${top.summary}\\nIndicators: ${(top.signals || []).join('; ')}\\n${(top.phones || []).length ? 'Unofficial phone numbers listed: ' + top.phones.join(', ') + '\\n' : ''}\\nWe ask that you review and remove it under your impersonation / fraud policy. Evidence is available on request.\\n\\nThank you,\\n${b.brand} Brand Protection`\n  : '';\n\nreturn [{ json: {\n  ok: true,\n  brand: b.brand,\n  scannedAt: b.scannedAt,\n  totalFlagged: b.stats?.flagged ?? all.length,\n  urgentCount: urgent.length,\n  hasUrgent: urgent.length > 0,\n  message,\n  abuseSubject,\n  abuseBody,\n  topFinding: top ? { name: top.name, platform: top.platform, url: top.url, score: top.score } : null\n} }];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Build Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, received: $json.totalFlagged, urgent: $json.urgentCount, actions: ['report_built', $json.hasUrgent ? 'alert_queued' : 'no_alert_needed'] } }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Respond to BrandGuard",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [500, 80]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.hasUrgent }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Any critical or high?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [500, 320]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [780, 240],
+      "disabled": true,
+      "notes": "Enable after selecting your Telegram bot credential and setting the chat ID."
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "subject": "={{ $json.abuseSubject }}",
+        "message": "={{ $json.abuseBody }}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "Draft Abuse Report (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [780, 420],
+      "disabled": true,
+      "notes": "Enable after connecting Gmail. Creates a DRAFT only - a human reviews before sending."
+    },
+    {
+      "parameters": {
+        "content": "## BrandGuard automation layer\n\n1. BrandGuard app POSTs scan findings here.\n2. 'Build Report' formats an alert + a platform abuse report.\n3. App gets an instant JSON reply.\n4. If critical/high: Telegram alert + Gmail DRAFT (enable these two after adding credentials).\n\nReports are drafts for human review - nothing is sent automatically.",
+        "height": 260,
+        "width": 360
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-20, -120]
+    }
+  ],
+  "connections": {
+    "BrandGuard Webhook": {
+      "main": [[{ "node": "Build Report", "type": "main", "index": 0 }]]
+    },
+    "Build Report": {
+      "main": [[
+        { "node": "Respond to BrandGuard", "type": "main", "index": 0 },
+        { "node": "Any critical or high?", "type": "main", "index": 0 }
+      ]]
+    },
+    "Any critical or high?": {
+      "main": [
+        [
+          { "node": "Telegram Alert", "type": "main", "index": 0 },
+          { "node": "Draft Abuse Report (Gmail)", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
