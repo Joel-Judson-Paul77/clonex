@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import ProfileForm, { EMPTY_PROFILE } from "@/components/ProfileForm";
 import AccuracyView from "@/components/AccuracyView";
 import ScanView from "@/components/ScanView";
+import AutomationView from "@/components/AutomationView";
 import Landing from "@/components/Landing";
 import type { BrandProfile } from "@/lib/types";
 
@@ -17,11 +18,12 @@ const STEPS = [
   { id: "profile", label: "Brand Profile" },
   { id: "monitor", label: "Monitor & Triage" },
   { id: "accuracy", label: "Accuracy Report" },
+  { id: "automation", label: "How it works" },
 ] as const;
 
 export default function Home() {
   const [profile, setProfile] = useState<BrandProfile | null>(null);
-  const [tab, setTab] = useState<"profile" | "monitor" | "accuracy">("profile");
+  const [tab, setTab] = useState<"profile" | "monitor" | "accuracy" | "automation">("profile");
   const [ready, setReady] = useState(false);
   const [entered, setEntered] = useState(false);
   const [formKey, setFormKey] = useState(0); // bumping it remounts the profile form with empty fields
@@ -95,7 +97,7 @@ export default function Home() {
           </svg>
           <h1 className="text-xl font-semibold tracking-tight text-white">CloneX</h1>
         </div>
-        <nav aria-label="Workflow steps" className="grid w-full grid-cols-3 items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm sm:flex sm:w-auto">
+        <nav aria-label="Workflow steps" className="grid w-full grid-cols-4 items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm sm:flex sm:w-auto">
           {STEPS.map((s, i) => {
             const locked = s.id === "monitor" && !profile;
             const active = tab === s.id;
@@ -128,7 +130,9 @@ export default function Home() {
       </header>
 
       <main id="main" tabIndex={-1} className="focus:outline-none">
-        {tab === "accuracy" ? (
+        {tab === "automation" ? (
+          <AutomationView />
+        ) : tab === "accuracy" ? (
           <AccuracyView />
         ) : tab === "profile" || !profile ? (
           <ProfileForm key={formKey} initial={profile ?? EMPTY_PROFILE} onSave={save} />
