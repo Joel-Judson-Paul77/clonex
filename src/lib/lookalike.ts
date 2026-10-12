@@ -46,7 +46,10 @@ const affixOk = (rest: string) => rest === "" || /^\d+$/.test(rest) || AFFIXES.h
 
 /** True when the brand appears as a whole word in the candidate, optionally glued to a scam-style affix or digits. */
 function embeddedAsWord(candidate: string, b: string): boolean {
-  const toks = candidate.split(/[^\p{L}\p{N}]+/u).filter(Boolean).map(normalize).filter(Boolean);
+  // digits stuck to the edge of a word ("paytm247", "24x7paytm") are their own token; digits inside a word
+  // ("p4ytm") stay put because that is a character swap, which normalize() already reads as a letter
+  const spaced = candidate.replace(/(\p{L})(\d+)(?![\p{L}\p{N}])/gu, "$1 $2").replace(/(^|[^\p{L}\p{N}])(\d+)(?=\p{L})/gu, "$1$2 ");
+  const toks = spaced.split(/[^\p{L}\p{N}]+/u).filter(Boolean).map(normalize).filter(Boolean);
   for (let i = 0; i < toks.length; i++) {
     let joined = "";
     for (let j = i; j < Math.min(toks.length, i + 4); j++) {

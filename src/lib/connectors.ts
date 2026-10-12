@@ -221,7 +221,7 @@ export async function scanTelegram(brand: Brand): Promise<Result> {
 /** A real DNS hostname: dot-separated labels, letters/digits/hyphens, a letter TLD. Rejects the company
  *  names that also appear in certificate fields (e.g. "paytm money limited"). */
 export function isHostname(h: string): boolean {
-  return h.length <= 253 && /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))*\.[a-z]{2,63}$/.test(h);
+  return h.length <= 253 && /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))*\.(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/.test(h);
 }
 export async function scanCertTransparency(brand: Brand): Promise<Result> {
   const token = brand.name.toLowerCase().replace(/[^a-z0-9]/g, "");

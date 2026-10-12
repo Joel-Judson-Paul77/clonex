@@ -2,7 +2,7 @@
 
 Brand impersonation monitoring for app stores and social platforms. Kampus.VC hackathon, Challenge 3: *Digital Risk Protection, Social & App Monitoring*.
 
-**Live demo:** https://clonex-app.vercel.app (takedown runs in demo mode there: notices go only to the owner's test inbox, never to a platform)
+**Live demo:** https://clonex-app.vercel.app · **Video walkthrough:** https://clonex-app.vercel.app/demo/CloneX-demo.mp4 (takedown runs in demo mode there: notices go only to the owner's test inbox, never to a platform)
 
 You describe your real brand once. CloneX searches for look-alike apps and accounts, explains each detection in plain language with a 0 to 100 score, never flags your own official assets, and lets an analyst send a reviewed takedown notice through an n8n workflow.
 
@@ -34,6 +34,31 @@ Everything works with no configuration. Optional settings go in `.env.local` (se
 
 Every result carries a LIVE, SIMULATED or CACHED badge. If a source fails, the scan continues, the last good result for that source is shown as CACHED, and the dashboard says which source was unavailable.
 
+## Architecture
+
+```mermaid
+flowchart LR
+  P["Brand profile<br/>name, logo, handles, apps,<br/>publishers, domains, phones<br/>(verified live, kept in the browser)"] --> S
+  subgraph S["Data sources (in parallel, 20 s limit each)"]
+    A1["Apple App Store"]
+    A2["Google Play"]
+    A3["Bluesky"]
+    A4["Telegram"]
+    A5["Certificate logs"]
+    A6["Instagram / X (simulated, labelled)"]
+  end
+  S --> X["Exclude official assets<br/>handle, app ID, publisher, domain"]
+  X --> D["Detection<br/>name look-alike, logo hash, scam wording,<br/>phone, links, account age"]
+  D --> R["Score 0-100, reasons,<br/>critical / high / suspicious"]
+  R --> T["Takedown review dialog"]
+  T --> N["n8n workflow<br/>password check, email or draft, reply"]
+  C[("Server cache<br/>last good result per source")] -.fallback.-> S
+```
+
+**Storage:** the brand profile and last scan stay in the browser. The server keeps only a small cache of the last good result per source, so a failing source falls back to a result labelled CACHED. Nothing about users is stored.
+
+**Official assets are removed before scoring**, by handle, app ID or package, publisher name and domain, so a brand's own accounts and apps can never be flagged.
+
 ## How detection works
 
 1. **Brand profile** (step 1): name, logo, official handles, apps, publishers, domains and support numbers. Search any brand and the form fills itself from the stores. Every asset is verified live.
@@ -60,6 +85,15 @@ Every result carries a LIVE, SIMULATED or CACHED badge. If a source fails, the s
 | `CLONEX_TAKEDOWN_MODE` | `demo` (default) or `live` |
 | `CLONEX_DEMO_INBOX` | Your own inbox for demo-mode notices |
 | `CLONEX_NOTIFY_KEY` | Enables `/api/notify` (scan alerts); callers send it as `x-clonex-key` |
+
+## Tests
+
+```bash
+npm test            # 74 unit tests: look-alike matching, scoring, official-asset exclusion, API guards
+npm run test:coverage
+```
+
+The accuracy tests also guard the numbers quoted above, so a detection change that lowers them fails the build. CI runs type-check, lint, tests and the production build on every push.
 
 ## Known limits
 
