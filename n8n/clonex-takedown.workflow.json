@@ -69,7 +69,7 @@
       "parameters": {
         "resource": "message",
         "operation": "send",
-        "sendTo": "={{ $json.to }}",
+        "sendTo": "REPLACE_WITH_YOUR_DEMO_INBOX",
         "subject": "={{ $json.subject }}",
         "emailType": "text",
         "message": "={{ $json.message }}",
@@ -83,7 +83,7 @@
         800,
         140
       ],
-      "notes": "Connect your Gmail credential. Demo mode sends to your own test inbox."
+      "notes": "Connect your Gmail credential and type your own inbox in To. Do not use the request payload for the recipient: the webhook is public, so that would let anyone make your Gmail send to any address."
     },
     {
       "parameters": {
@@ -138,7 +138,7 @@
     },
     {
       "parameters": {
-        "content": "## CloneX takedown dispatch\nWebhook (POST from /api/trigger-takedown) -> Prepare notice -> email (or Gmail draft) -> Telegram alert -> reply.\n\n**Before publishing:** connect Gmail + Telegram credentials; set the Webhook node to Header Auth with the secret you put in N8N_WEBHOOK_SECRET (header `x-clonex-secret`).\n\n**Optional AI step:** CloneX already writes the notice text and lets the user edit it. To have an AI polish it, add an AI node between 'Takedown Webhook' and 'Prepare notice' and write its output into `body.noticeText`.\n\nThe workflow replies only after the email step succeeds, so CloneX never reports a notice as sent when it was not.",
+        "content": "## CloneX takedown dispatch\nWebhook (POST from /api/trigger-takedown) -> Prepare notice -> email (or Gmail draft) -> Telegram alert -> reply.\n\n**Before publishing:** set the To address of \"Send notice (Gmail)\" to your own inbox (it is fixed on purpose, never taken from the request); connect Gmail + Telegram credentials; set the Webhook node to Header Auth with the secret you put in N8N_WEBHOOK_SECRET (header `x-clonex-secret`).\n\n**Optional AI step:** CloneX already writes the notice text and lets the user edit it. To have an AI polish it, add an AI node between 'Takedown Webhook' and 'Prepare notice' and write its output into `body.noticeText`.\n\nThe workflow replies only after the email step succeeds, so CloneX never reports a notice as sent when it was not.",
         "height": 340,
         "width": 520
       },
