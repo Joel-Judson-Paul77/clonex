@@ -3,7 +3,7 @@
 import { NeuroBackdrop } from "@/components/ui/neuro-backdrop";
 import { useEffect, useState } from "react";
 import { Eye, Search, ShieldAlert, ShieldCheck, TriangleAlert } from "lucide-react";
-import { KpiCard, Panel, PlatformBars } from "@/components/scan/charts";
+import { KpiCard, Panel, PlatformBars, RiskStrip } from "@/components/scan/charts";
 import type { BrandProfile, ExcludedItem, Finding, Platform, ScanResult, Severity, Signal, SourceStatus } from "@/lib/types";
 import { profileToBrand } from "@/lib/types";
 import type { TakedownRecord, TakedownResponse } from "@/lib/takedown";
@@ -35,10 +35,10 @@ function SourceBadge({ live, cached }: { live: boolean; cached?: boolean }) {
 function ScoreRing({ score, sev }: { score: number; sev: Severity }) {
   const r = 18, c = 2 * Math.PI * r;
   return (
-    <svg width="48" height="48" viewBox="0 0 46 46" className="shrink-0" aria-label={`Risk score ${score} of 100`}>
+    <svg width="60" height="60" viewBox="0 0 46 46" className="shrink-0 drop-shadow-lg" aria-label={`Risk score ${score} of 100`}>
       <circle cx="23" cy="23" r={r} fill="none" stroke="#27272a" strokeWidth="4" />
       <circle cx="23" cy="23" r={r} fill="none" stroke={RING[sev]} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(score / 100) * c} ${c}`} transform="rotate(-90 23 23)" />
-      <text x="23" y="27.5" textAnchor="middle" className="fill-white text-[13px] font-semibold">{score}</text>
+      <text x="23" y="27.5" textAnchor="middle" className="fill-white text-[13px] font-bold">{score}</text>
     </svg>
   );
 }
@@ -175,9 +175,9 @@ function Evidence({ f, officialLogo }: { f: Finding; officialLogo?: string }) {
 
 // Card styling per severity group. Critical and high both get the Report Scam action.
 const TONES = {
-  critical: { border: "border-red-500/30", chip: "bg-red-500/10 text-red-200", report: true },
-  high: { border: "border-orange-500/30", chip: "bg-orange-500/10 text-orange-200", report: true },
-  suspicious: { border: "border-amber-500/25", chip: "bg-amber-500/10 text-amber-200", report: false },
+  critical: { border: "border-red-500/25", chip: "bg-red-500/10 text-red-200", edge: "via-red-400/80", wash: "from-red-500/[0.07]", report: true },
+  high: { border: "border-orange-500/25", chip: "bg-orange-500/10 text-orange-200", edge: "via-orange-400/80", wash: "from-orange-500/[0.07]", report: true },
+  suspicious: { border: "border-amber-500/20", chip: "bg-amber-500/10 text-amber-200", edge: "via-amber-300/70", wash: "from-amber-400/[0.05]", report: false },
 } as const;
 
 function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending }: {
@@ -186,21 +186,22 @@ function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending }
   const reasons = reasonsOf(f);
   const t = TONES[tone];
   return (
-    <div className={`rounded-2xl border bg-white/[0.03] ${t.border}`}>
-      <div className="flex flex-wrap items-start gap-4 p-4">
+    <div className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br to-white/[0.02] transition-colors hover:border-white/25 ${t.wash} ${t.border}`}>
+      <span aria-hidden="true" className={`pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent to-transparent ${t.edge}`} />
+      <div className="flex flex-wrap items-start gap-5 p-5">
         <ScoreRing score={f.score} sev={f.severity} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-white">{f.name}</span>
+            <span className="text-base font-semibold text-white">{f.name}</span>
             <SourceBadge live={f.source === "live"} />
             {pending && <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-sky-300">TAKEDOWN PENDING</span>}
           </div>
           <div className="mt-0.5 text-xs text-white/55">
             {PLATFORM[f.platform]} · <span className="font-mono">{f.handle}</span>
           </div>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <div className="mt-3 flex flex-wrap gap-2">
             {reasons.map((r) => (
-              <span key={r} className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${t.chip}`}>{r}</span>
+              <span key={r} className={`rounded-full px-3 py-1 text-xs font-medium ${t.chip}`}>{r}</span>
             ))}
           </div>
         </div>
@@ -220,16 +221,22 @@ function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending }
   );
 }
 
-function Group({ dot, title, subtitle, count, tone, children }: {
-  dot: string; title: string; subtitle: string; count: number; tone: string; children: React.ReactNode;
+function Group({ dot, title, subtitle, count, tone, show = true, children }: {
+  dot: string; title: string; subtitle: string; count: number; tone: string; show?: boolean; children: React.ReactNode;
 }) {
+  if (!show) return null;
   return (
-    <section className="space-y-3">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h3 className={`flex items-center gap-2.5 text-lg font-semibold ${tone}`}><span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${dot}`} />{title} <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/75">{count}</span></h3>
-          <p className="text-xs text-white/55">{subtitle}</p>
+    <section className="space-y-4 pt-2">
+      <div>
+        <div className="flex items-center gap-4">
+          <h3 className={`flex shrink-0 items-center gap-2.5 font-heading text-xl font-semibold ${tone}`}>
+            <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${dot}`} />
+            {title}
+            <span className="rounded-full bg-white/10 px-2.5 py-0.5 font-sans text-xs font-medium text-white/75">{count}</span>
+          </h3>
+          <span aria-hidden="true" className="h-px flex-1 bg-gradient-to-r from-white/15 to-transparent" />
         </div>
+        <p className="mt-1.5 max-w-3xl text-xs leading-relaxed text-white/55">{subtitle}</p>
       </div>
       {children}
     </section>
@@ -249,7 +256,7 @@ function Progress({ sources }: { sources: string[] }) {
         <span className="text-sm font-medium text-white">Scanning {sources.length} sources in parallel… {sec}s</span>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {sources.map((s) => <span key={s} className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/75">{s}</span>)}
+        {sources.map((s, i) => <span key={s} className="flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-xs text-white/80"><span aria-hidden="true" className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" style={{ animationDelay: `${i * 180}ms` }} />{s}</span>)}
       </div>
       <p className="mt-3 text-xs text-white/55">Searching look-alike names, comparing logos and checking listing text for scam patterns. Usually 10–20 seconds.</p>
     </div>
@@ -373,6 +380,7 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
     });
   };
   const [simulate, setSimulate] = useState(true);
+  const [view, setView] = useState<"all" | "critical" | "high" | "suspicious" | "excluded">("all");
 
   const run = async () => {
     setLoading(true);
@@ -417,28 +425,47 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
     <div className="space-y-6">
       <div className="glass-card rounded-3xl p-6 sm:p-8">
         <NeuroBackdrop />
-        <div className="relative">
-        <p className="eyebrow">Step 2 of 3</p>
-        <h2 className="mt-2 bg-gradient-to-b from-white to-white/55 bg-clip-text text-xl font-semibold leading-[1.2] text-transparent sm:text-2xl">Scan app stores and social platforms for impersonators.</h2>
-        <div className="mt-5 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-3">
-            {profile.logoDataUrl && (
+        <div className="relative flex flex-wrap items-center gap-x-8 gap-y-6">
+          <div className="flex min-w-0 items-center gap-5">
+            {profile.logoDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- data URL
-              <img src={profile.logoDataUrl} alt="" className="h-10 w-10 rounded-lg border border-white/15 object-cover" />
+              <img src={profile.logoDataUrl} alt="" className="h-16 w-16 shrink-0 rounded-2xl border border-white/20 object-cover shadow-xl shadow-black/50 sm:h-20 sm:w-20" />
+            ) : (
+              <div aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 font-heading text-3xl font-semibold text-white sm:h-20 sm:w-20">
+                {profile.name.trim().charAt(0).toUpperCase()}
+              </div>
             )}
-            <div>
-              <div className="text-sm font-semibold text-white">Protecting {profile.name}</div>
-              <div className="text-xs text-white/55">{profile.domains.length} domain(s) · {profile.apps.length} app(s) · {Object.values(profile.handles).flat().length} handle(s)</div>
+            <div className="min-w-0">
+              <p className="eyebrow">Step 2 of 3 · Monitor &amp; triage</p>
+              <h2 className="mt-1.5 break-words font-heading text-2xl font-semibold leading-tight tracking-tight text-white sm:text-4xl">Protecting {profile.name}</h2>
+              <ul className="mt-3 flex flex-wrap gap-2 text-xs text-white/75">
+                {[
+                  [profile.domains.length, "domain"],
+                  [profile.apps.length, "app"],
+                  [Object.values(profile.handles).flat().length, "official account"],
+                ].map(([n, label]) => (
+                  <li key={label} className="rounded-full border border-white/12 bg-white/[0.06] px-3 py-1">
+                    <span className="font-semibold text-white">{n}</span> {label}
+                    {n === 1 ? "" : "s"}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
-          <label className="ml-auto flex cursor-pointer items-center gap-2 text-xs text-white/60">
-            <input type="checkbox" checked={simulate} onChange={(e) => setSimulate(e.target.checked)} className="accent-white" />
-            Include simulated Instagram &amp; X (demo)
-          </label>
-          <button onClick={run} disabled={loading} className="btn-primary px-6 py-3 text-sm disabled:opacity-60">
-            {loading ? "Scanning…" : result ? "↻ Re-scan" : <><Search aria-hidden="true" className="mr-2 inline h-4 w-4 -translate-y-px" />Scan for impersonators</>}
-          </button>
-        </div>
+
+          <div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-3">
+            <label className="flex cursor-pointer items-center gap-3 text-xs text-white/75">
+              <input type="checkbox" role="switch" checked={simulate} onChange={(e) => setSimulate(e.target.checked)} className="peer sr-only" />
+              <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-white/15 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-emerald-400/80 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-white peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black" />
+              <span>
+                Simulated Instagram &amp; X
+                <span className="block text-[11px] text-white/50">demo data, clearly labelled</span>
+              </span>
+            </label>
+            <button onClick={run} disabled={loading} className="btn-primary px-7 py-3.5 text-sm shadow-lg shadow-white/10 disabled:opacity-60">
+              {loading ? "Scanning…" : result ? "↻ Re-scan" : <><Search aria-hidden="true" className="mr-2 inline h-4 w-4 -translate-y-px" />Scan for impersonators</>}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -476,16 +503,15 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
       {result && (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <KpiCard label="Critical" value={critical.length} tone="text-red-300" tile="bg-red-500/15 text-red-300" Icon={ShieldAlert} sub="Act on these first" />
-            <KpiCard label="High risk" value={high.length} tone="text-orange-300" tile="bg-orange-500/15 text-orange-300" Icon={TriangleAlert} sub="Strong evidence, act soon" />
-            <KpiCard label="Suspicious" value={suspicious.length} tone="text-amber-300" tile="bg-amber-500/15 text-amber-300" Icon={Eye} sub="Worth a manual look" />
-            <KpiCard label="Safe / verified" value={excluded.length} tone="text-emerald-300" tile="bg-emerald-500/15 text-emerald-300" Icon={ShieldCheck} sub="Your official assets" />
+            <KpiCard label="Critical" value={critical.length} tone="text-red-300" tile="bg-red-500/15 text-red-300" glow="bg-red-500/40" Icon={ShieldAlert} sub="Act on these first" />
+            <KpiCard label="High risk" value={high.length} tone="text-orange-300" tile="bg-orange-500/15 text-orange-300" glow="bg-orange-500/35" Icon={TriangleAlert} sub="Strong evidence, act soon" />
+            <KpiCard label="Suspicious" value={suspicious.length} tone="text-amber-300" tile="bg-amber-500/15 text-amber-300" glow="bg-amber-400/30" Icon={Eye} sub="Worth a manual look" />
+            <KpiCard label="Safe / verified" value={excluded.length} tone="text-emerald-300" tile="bg-emerald-500/15 text-emerald-300" glow="bg-emerald-500/30" Icon={ShieldCheck} sub="Your official assets" />
           </div>
-          <p className="-mt-2 text-xs text-white/55">
-            {result.stats.candidates} listings checked in {(result.stats.ms / 1000).toFixed(1)}s
-          </p>
 
-          <div className="grid items-start gap-4 md:grid-cols-2">
+          <RiskStrip critical={critical.length} high={high.length} suspicious={suspicious.length} safe={excluded.length} checked={result.stats.candidates} seconds={result.stats.ms / 1000} />
+
+          <div className="grid gap-4 md:grid-cols-2">
             <Panel title="Where they appear" hint="Flagged listings by platform">
               <PlatformBars findings={result.findings} labels={PLATFORM} />
             </Panel>
@@ -494,28 +520,50 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
             </Panel>
           </div>
 
-          <Group dot="bg-red-400" title="Critical Threats" subtitle="Risk score 75 or more: a close look-alike plus evidence such as a copied logo, scam wording or an unofficial phone number." count={critical.length} tone="text-red-300">
+          <div role="group" aria-label="Show findings" className="flex flex-wrap items-center gap-2 pt-2">
+            {(
+              [
+                ["all", "All", critical.length + high.length + suspicious.length + excluded.length],
+                ["critical", "Critical", critical.length],
+                ["high", "High risk", high.length],
+                ["suspicious", "Suspicious", suspicious.length],
+                ["excluded", "Safe", excluded.length],
+              ] as const
+            ).map(([id, label, n]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={view === id}
+                onClick={() => setView(id)}
+                className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${view === id ? "border-white bg-white text-black" : "border-white/15 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"}`}
+              >
+                {label} <span className={view === id ? "text-black/60" : "text-white/50"}>{n}</span>
+              </button>
+            ))}
+          </div>
+
+          <Group show={view === "all" || view === "critical"} dot="bg-red-400" title="Critical Threats" subtitle="Risk score 75 or more: a close look-alike plus evidence such as a copied logo, scam wording or an unofficial phone number." count={critical.length} tone="text-red-300">
             {critical.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No critical threats in this scan.</p>}
             <Limited items={critical} render={(f) => (
               <ThreatCard key={f.id} f={f} tone="critical" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} />
             )} />
           </Group>
 
-          <Group dot="bg-orange-400" title="High Risk" subtitle="Risk score 55 to 74: likely impersonation. Check the evidence, then report." count={high.length} tone="text-orange-300">
+          <Group show={view === "all" || view === "high"} dot="bg-orange-400" title="High Risk" subtitle="Risk score 55 to 74: likely impersonation. Check the evidence, then report." count={high.length} tone="text-orange-300">
             {high.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No high-risk listings in this scan.</p>}
             <Limited items={high} render={(f) => (
               <ThreatCard key={f.id} f={f} tone="high" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} />
             )} />
           </Group>
 
-          <Group dot="bg-amber-300" title="Suspicious Listings" subtitle="Risk score below 55: look-alike or misspelled names with weaker evidence. Review before acting." count={suspicious.length} tone="text-amber-300">
+          <Group show={view === "all" || view === "suspicious"} dot="bg-amber-300" title="Suspicious Listings" subtitle="Risk score below 55: look-alike or misspelled names with weaker evidence. Review before acting." count={suspicious.length} tone="text-amber-300">
             {suspicious.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No suspicious listings in this scan.</p>}
             <Limited items={suspicious} render={(f) => (
               <ThreatCard key={f.id} f={f} tone="suspicious" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} />
             )} />
           </Group>
 
-          <Group dot="bg-emerald-400" title="Excluded Assets" subtitle="Matched to your brand profile, so never scored." count={excluded.length} tone="text-emerald-300">
+          <Group show={view === "all" || view === "excluded"} dot="bg-emerald-400" title="Excluded Assets" subtitle="Matched to your brand profile, so never scored." count={excluded.length} tone="text-emerald-300">
             <SafeList items={excluded} />
           </Group>
         </>
