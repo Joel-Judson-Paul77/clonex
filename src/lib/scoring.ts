@@ -136,7 +136,7 @@ export function scoreCandidate(c: Candidate, brand: Brand): Finding | null {
       key: "phone",
       label: "Unofficial contact number",
       weight: Math.min(20, 14 + rogue.length * 3),
-      detail: `Lists ${rogue.join(", ")} — not a registered ${brand.name} number`,
+      detail: `Lists ${rogue.join(", ")}, which is not a registered ${brand.name} number`,
     });
   }
 
@@ -148,7 +148,7 @@ export function scoreCandidate(c: Candidate, brand: Brand): Finding | null {
     }
   }
   if (c.kind === "app" && c.ratings !== undefined && c.ratings < 50) { // only when the store actually reported a count
-    signals.push({ key: "reach", label: "Few ratings", weight: 4, detail: `${c.ratings ?? 0} ratings — unlike an established app` });
+    signals.push({ key: "reach", label: "Few ratings", weight: 4, detail: `${c.ratings ?? 0} ratings, unlike an established app` });
   }
   if (c.kind === "domain") {
     signals.push({ key: "cert", label: "Certificate issued for look-alike host", weight: 10, detail: "Found in public certificate-transparency logs" });

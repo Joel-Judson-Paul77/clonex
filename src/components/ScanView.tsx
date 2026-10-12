@@ -82,7 +82,7 @@ function reasonsOf(f: Finding, max = 4): string[] {
 function takedownReport(f: Finding, brand: string): string {
   const date = new Date().toISOString().slice(0, 10);
   return [
-    `Subject: Impersonation report — "${f.name}" impersonating ${brand}`,
+    `Subject: Impersonation report: "${f.name}" impersonating ${brand}`,
     "",
     "Hello Trust & Safety team,",
     "",
@@ -151,7 +151,7 @@ function Evidence({ f, officialLogo }: { f: Finding; officialLogo?: string }) {
                 </div>
               ))}
               <div className="pl-1">
-                <div className={`text-2xl font-semibold ${(f.logoSim ?? 0) >= 0.6 ? "text-red-300" : "text-white/60"}`}>{f.logoSim === undefined ? "—" : `${Math.round(f.logoSim * 100)}%`}</div>
+                <div className={`text-2xl font-semibold ${(f.logoSim ?? 0) >= 0.6 ? "text-red-300" : "text-white/60"}`}>{f.logoSim === undefined ? "n/a" : `${Math.round(f.logoSim * 100)}%`}</div>
                 <div className="text-[10px] uppercase tracking-wide text-white/55">logo match</div>
               </div>
             </div>

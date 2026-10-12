@@ -9,7 +9,7 @@ const dmMono = DM_Mono({ variable: "--font-dm-mono", subsets: ["latin"], weight:
 const FONT_CSS = "https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&display=swap";
 
 export const metadata: Metadata = {
-  title: "CloneX — Brand impersonation monitoring",
+  title: "CloneX: Brand impersonation monitoring",
   description: "Find fake profiles, pages and apps impersonating your brand.",
 };
 

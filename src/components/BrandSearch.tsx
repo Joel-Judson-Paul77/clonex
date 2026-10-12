@@ -71,9 +71,9 @@ export default function BrandSearch({ onPick }: { onPick: (c: BrandCard) => void
         const r = await fetch(`/api/lookup-brand?q=${encodeURIComponent(term)}`, { signal: ctl.signal });
         const j: LookupResponse = await r.json();
         setCards(mergeCards(j.cards, matchPresets(term)));
-        setNote(j.note ?? (j.live.ios || j.live.android ? "" : "Stores unreachable — showing built-in presets"));
+        setNote(j.note ?? (j.live.ios || j.live.android ? "" : "Stores unreachable, showing built-in presets"));
       } catch (e) {
-        if ((e as Error).name !== "AbortError") setNote("Live lookup failed — showing built-in presets");
+        if ((e as Error).name !== "AbortError") setNote("Live lookup failed, showing built-in presets");
       } finally {
         if (!ctl.signal.aborted) setLoading(false);
       }

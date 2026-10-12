@@ -21,8 +21,8 @@ export const INPUT =
 export function AutoBadge({ state, verifiedText = "✓ Confirmed on the App Store / Google Play" }: { state: AutoState; verifiedText?: string }) {
   if (!state) return null;
   const amber = "mt-1 block w-fit rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300";
-  if (state === "pending") return <span className={amber}>Auto-filled from the store listing — checking…</span>;
-  if (state === "preset") return <span className={amber}>From built-in preset — not yet confirmed</span>;
+  if (state === "pending") return <span className={amber}>Auto-filled from the store listing (checking…)</span>;
+  if (state === "preset") return <span className={amber}>From built-in preset (not yet confirmed)</span>;
   return <span className="mt-1 block w-fit rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">{verifiedText}</span>;
 }
 

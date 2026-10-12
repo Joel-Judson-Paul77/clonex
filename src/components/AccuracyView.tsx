@@ -165,7 +165,7 @@ export default function AccuracyView() {
                 </table>
               </div>
               <p className="mt-3 text-xs text-white/55">
-                Name similarity alone over-flags ({main.nameOnly.fp} false alarms on legitimate names). The full pipeline needs a second piece of evidence — a logo copy, scam wording, an unofficial phone number, a typosquat or a spacing trick — before flagging.
+                Name similarity alone over-flags ({main.nameOnly.fp} false alarms on legitimate names). The full pipeline needs a second piece of evidence (a logo copy, scam wording, an unofficial phone number, a typosquat or a spacing trick) before flagging.
               </p>
             </section>
 
