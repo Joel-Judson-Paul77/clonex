@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp from "./sharp-config";
 import type { Brand, Candidate, SourceStatus } from "./types";
 
 // Instagram and X block automated search, so for the prototype these two platforms run on a

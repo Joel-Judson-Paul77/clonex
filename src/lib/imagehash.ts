@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp from "./sharp-config";
 
 // Perceptual logo matching: a 64-bit difference hash + 64-bit average hash per image.
 // Similar-looking images produce hashes that differ in only a few bits, even after

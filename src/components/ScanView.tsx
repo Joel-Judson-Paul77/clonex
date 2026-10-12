@@ -220,14 +220,14 @@ function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending }
   );
 }
 
-function Group({ icon, title, subtitle, count, tone, children }: {
-  icon: string; title: string; subtitle: string; count: number; tone: string; children: React.ReactNode;
+function Group({ dot, title, subtitle, count, tone, children }: {
+  dot: string; title: string; subtitle: string; count: number; tone: string; children: React.ReactNode;
 }) {
   return (
     <section className="space-y-3">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h3 className={`text-lg font-semibold ${tone}`}><span aria-hidden="true">{icon}</span> {title} <span className="text-white/55">({count})</span></h3>
+          <h3 className={`flex items-center gap-2.5 text-lg font-semibold ${tone}`}><span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${dot}`} />{title} <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/75">{count}</span></h3>
           <p className="text-xs text-white/55">{subtitle}</p>
         </div>
       </div>
@@ -446,9 +446,30 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
       {error && <p className="rounded-[10px] border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
 
       {!result && !loading && (
-        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center">
-          <p className="text-sm text-white/75">Press <b>Scan for impersonators</b> to search app stores and social platforms.</p>
-          <p className="mt-1 text-xs text-white/55">Results are sorted into critical, high-risk and suspicious listings, plus your own verified assets.</p>
+        <div className="rounded-2xl border border-dashed border-white/10 p-8 sm:p-10">
+          <p className="text-center text-sm text-white/75">Press <b>Scan for impersonators</b> to search app stores and social platforms.</p>
+          <ol className="mx-auto mt-6 grid max-w-3xl gap-3 sm:grid-cols-3">
+            {[
+              ["Search", "App Store, Google Play, Bluesky, Telegram and look-alike domains, all at once."],
+              ["Score", "Each listing gets a 0 to 100 risk score with the reasons behind it."],
+              ["Act", "Review the evidence, then send a takedown notice in one click."],
+            ].map(([t, d], i) => (
+              <li key={t} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                <span className="font-mono text-xs text-white/55">0{i + 1}</span>
+                <p className="mt-1 text-sm font-semibold text-white">{t}</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/60">{d}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {loading && !result && (
+        <div aria-hidden="true" className="space-y-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => <div key={i} className="shimmer h-24 rounded-2xl" />)}
+          </div>
+          <div className="shimmer h-40 rounded-2xl" />
         </div>
       )}
 
@@ -473,28 +494,28 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
             </Panel>
           </div>
 
-          <Group icon="🔴" title="Critical Threats" subtitle="Risk score 75 or more: a close look-alike plus evidence such as a copied logo, scam wording or an unofficial phone number." count={critical.length} tone="text-red-300">
+          <Group dot="bg-red-400" title="Critical Threats" subtitle="Risk score 75 or more: a close look-alike plus evidence such as a copied logo, scam wording or an unofficial phone number." count={critical.length} tone="text-red-300">
             {critical.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No critical threats in this scan.</p>}
             <Limited items={critical} render={(f) => (
               <ThreatCard key={f.id} f={f} tone="critical" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} />
             )} />
           </Group>
 
-          <Group icon="🟠" title="High Risk" subtitle="Risk score 55 to 74: likely impersonation. Check the evidence, then report." count={high.length} tone="text-orange-300">
+          <Group dot="bg-orange-400" title="High Risk" subtitle="Risk score 55 to 74: likely impersonation. Check the evidence, then report." count={high.length} tone="text-orange-300">
             {high.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No high-risk listings in this scan.</p>}
             <Limited items={high} render={(f) => (
               <ThreatCard key={f.id} f={f} tone="high" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} />
             )} />
           </Group>
 
-          <Group icon="🟡" title="Suspicious Listings" subtitle="Risk score below 55: look-alike or misspelled names with weaker evidence. Review before acting." count={suspicious.length} tone="text-amber-300">
+          <Group dot="bg-amber-300" title="Suspicious Listings" subtitle="Risk score below 55: look-alike or misspelled names with weaker evidence. Review before acting." count={suspicious.length} tone="text-amber-300">
             {suspicious.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No suspicious listings in this scan.</p>}
             <Limited items={suspicious} render={(f) => (
               <ThreatCard key={f.id} f={f} tone="suspicious" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} />
             )} />
           </Group>
 
-          <Group icon="🟢" title="Excluded Assets" subtitle="Matched to your brand profile, so never scored." count={excluded.length} tone="text-emerald-300">
+          <Group dot="bg-emerald-400" title="Excluded Assets" subtitle="Matched to your brand profile, so never scored." count={excluded.length} tone="text-emerald-300">
             <SafeList items={excluded} />
           </Group>
         </>

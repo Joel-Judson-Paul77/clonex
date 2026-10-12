@@ -260,7 +260,7 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
       )}
 
       {/* CTA bar, anchored beneath the grid */}
-      <div className="flex flex-wrap items-center justify-between gap-3 glass-card rounded-2xl p-4">
+      <div className="sticky bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0b0b0b]/85 p-4 shadow-2xl shadow-black/60 backdrop-blur-md">
         <p className="text-sm text-white/60">{busy ? "Verifying your assets with the live platforms…" : "Done? Save the profile and start monitoring."}</p>
         <button type="button" onClick={save} disabled={busy} className="btn-primary px-6 py-2.5 text-sm disabled:cursor-wait disabled:opacity-50">
           {busy ? "Verifying…" : "Save & go to Step 2 ➔"}
