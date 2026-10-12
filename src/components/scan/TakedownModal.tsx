@@ -91,7 +91,7 @@ export default function TakedownModal({ f, brand, platformLabel, initialText, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="takedown-title">
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col gap-4 overflow-auto rounded-2xl border border-white/15 bg-black p-6">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col gap-4 overflow-auto rounded-2xl border border-white/15 bg-black p-6 [&>*]:shrink-0">
         <div>
           <h3 id="takedown-title" className="text-lg font-semibold text-white">Initiate takedown</h3>
           <p className="text-xs text-white/55">Review the notice, then dispatch it through the CloneX n8n workflow.</p>

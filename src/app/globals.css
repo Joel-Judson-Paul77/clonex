@@ -76,9 +76,11 @@ h3 {
   color: rgba(255, 255, 255, 0.55);
 }
 
-/* Each step fades up gently when it opens. */
+/* Each step fades up gently when it opens. No fill mode on purpose: a transform left on this wrapper after
+   the animation would make it the containing block for position:fixed children, pulling dialogs and toasts
+   off the screen. */
 .page-enter {
-  animation: page-enter 0.35s ease-out both;
+  animation: page-enter 0.35s ease-out;
 }
 @keyframes page-enter {
   from {
