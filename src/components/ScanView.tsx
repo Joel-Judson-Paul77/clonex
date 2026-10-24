@@ -303,9 +303,9 @@ function SourceHealth({ sources }: { sources: SourceStatus[] }) {
   return (
     <ul className="space-y-2.5">
       {sources.map((s) => (
-        <li key={s.platform} className="flex items-center gap-2.5" title={s.note}>
+        <li key={s.label ?? s.platform} className="flex items-center gap-2.5" title={s.note}>
           <span className={`h-2 w-2 shrink-0 rounded-full ${s.ok ? "bg-emerald-400" : "bg-amber-400"}`} aria-hidden="true" />
-          <span className="min-w-0 flex-1 truncate text-sm text-white">{PLATFORM[s.platform]}</span>
+          <span className="min-w-0 flex-1 truncate text-sm text-white">{s.label ?? PLATFORM[s.platform]}</span>
           <span className="text-xs text-white/55">
             {!s.ok ? "scan continued without it" : s.cached ? "saved results" : `${s.count} checked`}
           </span>
