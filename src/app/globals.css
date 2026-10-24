@@ -68,12 +68,26 @@ html[data-theme="light"] {
   --font-sans: "General Sans", ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-syne), "General Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
+  --animate-border-beam: border-beam var(--border-beam-duration, 5s) linear var(--border-beam-delay, 0s) infinite;
 }
+
+/* BorderBeam: the comet's angle is a registered property so the conic gradient can be animated. */
+@property --border-beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes border-beam {
+  to {
+    --border-beam-angle: 360deg;
+  }
+}
+@custom-variant hover-none (@media (hover: none));
 
 html {
   color-scheme: dark;
-  /* one step larger than the 16px browser default; every rem-based size (text, spacing) scales with it */
-  font-size: 106.25%;
+  /* larger than the 16px browser default; every rem-based size (text, spacing) scales with it */
+  font-size: 112.5%;
 }
 
 /* the shader backdrops are white-on-black; in light mode flip them to dark-on-white */

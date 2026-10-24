@@ -4,6 +4,7 @@ import { ShieldAlert, type LucideIcon } from "lucide-react";
 import type { Finding, Platform } from "@/lib/types";
 import { motion } from "motion/react";
 import { CountUp } from "@/components/ui/count-up";
+import { BorderBeam } from "@/components/ui/border-beam";
 
 /** Colours shared by the donut, the bars and their legends. */
 export const SEV_COLOR = {
@@ -53,23 +54,27 @@ function GlowLine({ segments, total, label, className = "", ruler = false }: {
 }
 
 /** Summary number with an icon tile and a soft glow in the severity colour, as in a dashboard stat card. */
-export function KpiCard({ label, value, sub, tone, tile, Icon, glow = "", className = "" }: {
-  label: string; value: string | number; sub?: string; tone: string; tile: string; Icon: LucideIcon; glow?: string; className?: string;
+export function KpiCard({ label, value, sub, tone, tile, Icon, glow = "", beam = "#ffffff", beamDelay = 0, className = "" }: {
+  label: string; value: string | number; sub?: string; tone: string; tile: string; Icon: LucideIcon; glow?: string;
+  /** Colour and start offset (seconds, negative = mid-lap) of the comet that circles the card border. */
+  beam?: string; beamDelay?: number; className?: string;
 }) {
   return (
-    <div className={`glass-card group relative flex items-start justify-between gap-3 overflow-hidden rounded-2xl p-5 transition-colors hover:border-white/20 ${className}`}>
-      <div aria-hidden="true" className={`pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full opacity-60 blur-2xl transition-opacity group-hover:opacity-100 ${glow}`} />
-      <div className="relative min-w-0">
-        <div className="text-xs font-medium uppercase tracking-wider text-white/60">{label}</div>
-        <div className={`num mt-2 text-5xl sm:text-6xl ${tone}`}>
-          {typeof value === "number" ? <CountUp to={value} digitEffect="slide" duration={1.4} /> : value}
+    <BorderBeam color={beam} length={14} thickness={1.5} speed={6} delay={beamDelay} className={`rounded-2xl ${className}`}>
+      <div className="glass-card group relative flex h-full items-start justify-between gap-3 overflow-hidden rounded-2xl p-6 transition-colors hover:border-white/20">
+        <div aria-hidden="true" className={`pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full opacity-60 blur-2xl transition-opacity group-hover:opacity-100 ${glow}`} />
+        <div className="relative min-w-0">
+          <div className="text-sm font-medium uppercase tracking-wider text-white/65">{label}</div>
+          <div className={`num mt-3 text-6xl sm:text-7xl ${tone}`}>
+            {typeof value === "number" ? <CountUp to={value} digitEffect="slide" duration={1.4} /> : value}
+          </div>
+          {sub && <div className="mt-3 text-sm leading-snug text-white/65">{sub}</div>}
         </div>
-        {sub && <div className="mt-2.5 text-xs leading-snug text-white/60">{sub}</div>}
+        <div className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${tile}`}>
+          <Icon aria-hidden="true" className="h-6 w-6" />
+        </div>
       </div>
-      <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tile}`}>
-        <Icon aria-hidden="true" className="h-5 w-5" />
-      </div>
-    </div>
+    </BorderBeam>
   );
 }
 

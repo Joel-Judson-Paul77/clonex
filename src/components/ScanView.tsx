@@ -632,10 +632,10 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
       {result && (
         <>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <KpiCard label="Critical" value={critical.length} tone="text-red-300" tile="bg-red-500/15 text-red-300" glow="bg-red-500/40" Icon={ShieldAlert} sub="Act on these first" />
-            <KpiCard label="High risk" value={high.length} tone="text-orange-300" tile="bg-orange-500/15 text-orange-300" glow="bg-orange-500/35" Icon={TriangleAlert} sub="Strong evidence, act soon" />
-            <KpiCard label="Suspicious" value={suspicious.length} tone="text-amber-300" tile="bg-amber-500/15 text-amber-300" glow="bg-amber-400/30" Icon={Eye} sub="Worth a manual look" />
-            <KpiCard label="Safe / verified" value={excluded.length} tone="text-emerald-300" tile="bg-emerald-500/15 text-emerald-300" glow="bg-emerald-500/30" Icon={ShieldCheck} sub="Your official assets" />
+            <KpiCard beam="#f87171" beamDelay={0} label="Critical" value={critical.length} tone="text-red-300" tile="bg-red-500/15 text-red-300" glow="bg-red-500/40" Icon={ShieldAlert} sub="Act on these first" />
+            <KpiCard beam="#fb923c" beamDelay={-1.5} label="High risk" value={high.length} tone="text-orange-300" tile="bg-orange-500/15 text-orange-300" glow="bg-orange-500/35" Icon={TriangleAlert} sub="Strong evidence, act soon" />
+            <KpiCard beam="#fbbf24" beamDelay={-3} label="Suspicious" value={suspicious.length} tone="text-amber-300" tile="bg-amber-500/15 text-amber-300" glow="bg-amber-400/30" Icon={Eye} sub="Worth a manual look" />
+            <KpiCard beam="#34d399" beamDelay={-4.5} label="Safe / verified" value={excluded.length} tone="text-emerald-300" tile="bg-emerald-500/15 text-emerald-300" glow="bg-emerald-500/30" Icon={ShieldCheck} sub="Your official assets" />
           </div>
 
           <RiskStrip critical={critical.length} high={high.length} suspicious={suspicious.length} safe={excluded.length} checked={result.stats.candidates} seconds={result.stats.ms / 1000} />
