@@ -1,0 +1,201 @@
+{
+  "name": "CloneX - Takedown Email (analyst + brand security team)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clonex-takedown",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c3000000-0000-4000-8000-000000000001",
+      "name": "Takedown Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "clonex-takedown"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise the CloneX takedown payload and build the email + team alert.\nconst b = $input.first().json.body ?? $input.first().json;\nconst demo = b.mode !== \"live\";\nconst desk = b.intendedDesk || {};\nconst subject = (demo ? \"[CLONEX DEMO] \" : \"\") + 'Impersonation report: \"' + b.threatTitle + '\" impersonating ' + b.brandName + \" (\" + b.platform + \")\";\nconst fallback =\n  \"Hello Trust & Safety team,\\n\\nWe represent \" + b.brandName + \" and are reporting \" + b.threatTitle +\n  (b.detectedArtifact ? \" (\" + b.detectedArtifact + \")\" : \"\") + \" on \" + b.platform +\n  \", which impersonates our brand.\" + (b.evidenceUrl ? \"\\nEvidence: \" + b.evidenceUrl : \"\") +\n  \"\\nRisk score: \" + b.riskScore + \"/100.\\n\\nWe ask that you review and remove it under your impersonation policy.\";\nlet message = b.noticeText && b.noticeText.trim().length > 20 ? b.noticeText : fallback;\nif (demo) message = \"DEMO MODE: this notice was NOT sent to \" + (desk.desk || \"the platform\") + \".\\n\\n\" + message;\nif (!b.to && desk.formUrl) message += \"\\n\\nThis platform takes reports through a web form: \" + desk.formUrl;\nconst alert = \"CloneX takedown\" + (demo ? \" (demo)\" : \"\") + \" | \" + b.brandName + \": \" + b.threatTitle + \" on \" + b.platform +\n  \", risk \" + b.riskScore + \"/100. \" + (b.to ? \"Notice emailed to \" + b.to + \".\" : \"Notice saved as a Gmail draft for review.\");\nreturn [{ json: { ok: true, mode: b.mode, to: b.to || \"\", subject, message, alert, platform: b.platform } }];"
+      },
+      "id": "c3000000-0000-4000-8000-000000000002",
+      "name": "Prepare notice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// SAFETY: this workflow only ever emails addresses on this list. The website is public, so without it\n// anyone could make your Gmail send to any address. Add your team's addresses (lower case).\nconst APPROVED = [];\nconst p = $('Prepare notice').first().json;\nconst body = $('Takedown Webhook').first().json.body ?? {};\nconst copies = Array.isArray(body.copies) ? body.copies.map((e) => String(e).trim().toLowerCase()) : [];\nconst sendTo = copies.filter((e) => APPROVED.includes(e));\nconst blocked = copies.filter((e) => !APPROVED.includes(e));\nreturn [{ json: { ...p, sendTo, blocked } }];"
+      },
+      "id": "c3000000-0000-4000-8000-000000000003",
+      "name": "Check approved recipients",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "r1",
+              "leftValue": "={{ $json.sendTo.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c3000000-0000-4000-8000-000000000004",
+      "name": "Anyone approved to email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.sendTo.join(',') }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.message }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c3000000-0000-4000-8000-000000000005",
+      "name": "Email notice (Gmail)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        180
+      ],
+      "onError": "continueRegularOutput",
+      "notes": "Connect your own Gmail credential here. Recipients come only from the approved list in the previous step."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, mode: $('Check approved recipients').item.json.mode, action: $json.error ? 'logged' : 'emailed', sentTo: $json.error ? [] : $('Check approved recipients').item.json.sendTo, blocked: $('Check approved recipients').item.json.blocked } }}",
+        "options": {}
+      },
+      "id": "c3000000-0000-4000-8000-000000000006",
+      "name": "Reply: emailed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, mode: $json.mode, action: 'logged', sentTo: [], blocked: $json.blocked } }}",
+        "options": {}
+      },
+      "id": "c3000000-0000-4000-8000-000000000007",
+      "name": "Reply: logged only",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Takedown Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare notice": {
+      "main": [
+        [
+          {
+            "node": "Check approved recipients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check approved recipients": {
+      "main": [
+        [
+          {
+            "node": "Anyone approved to email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anyone approved to email?": {
+      "main": [
+        [
+          {
+            "node": "Email notice (Gmail)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply: logged only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email notice (Gmail)": {
+      "main": [
+        [
+          {
+            "node": "Reply: emailed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
