@@ -42,8 +42,12 @@ function OdometerDigit({ springValue, place }: OdometerDigitProps) {
 
   const y = useTransform(springValue, (v) => {
     if (!height) return 0;
-    const digit = (Math.abs(v) / place) % 10;
-    return -digit * height;
+    // Each place shows a whole digit and only rolls while the place below it carries over (9 -> 0),
+    // so the number always settles exactly on its digits instead of resting between two of them.
+    const abs = Math.abs(v);
+    const carry = Math.min(1, Math.max(0, (abs % place) - (place - 1)));
+    const pos = Math.floor(abs / place) % 10 + carry;
+    return -pos * height;
   });
 
   return (

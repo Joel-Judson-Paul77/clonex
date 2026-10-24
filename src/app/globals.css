@@ -135,9 +135,9 @@ html[data-theme="light"] .glass-card {
   pointer-events: none;
 }
 
-/* Numerals: Syne semibold, tight tracking and fixed-width digits (the stat style used on kravos.tech). */
+/* Numerals: Space Grotesk semibold, tight tracking and fixed-width digits so counters never jitter. */
 .num {
-  font-family: var(--font-heading);
+  font-family: var(--font-num), var(--font-heading);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.03em;
