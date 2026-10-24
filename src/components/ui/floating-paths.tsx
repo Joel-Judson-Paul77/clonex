@@ -12,15 +12,12 @@ export function FloatingPathsBackground({
   children,
   className,
   pathsClassName,
-  fixed = false,
 }: {
   /** 1 sweeps the curves one way, -1 mirrors them. */
   position: number;
   className?: string;
   /** Extra classes for the line layer (opacity, colour). */
   pathsClassName?: string;
-  /** Pin the lines to the viewport so they fill the whole page background instead of just this block. */
-  fixed?: boolean;
   children: React.ReactNode;
 }) {
   const paths = Array.from({ length: 36 }, (_, i) => ({
@@ -38,7 +35,7 @@ export function FloatingPathsBackground({
   return (
     <div className={cn("relative w-full", className)}>
       {/* lines sit behind the content and never take clicks; theme-aware via the page's foreground colour */}
-      <div aria-hidden="true" className={cn("pointer-events-none inset-0 overflow-hidden text-foreground", fixed ? "fixed z-0" : "absolute", pathsClassName)}>
+      <div aria-hidden="true" className={cn("pointer-events-none absolute inset-0 overflow-hidden text-foreground", pathsClassName)}>
         <svg className="h-full w-full" viewBox="0 0 696 316" preserveAspectRatio="xMidYMid slice" fill="none">
           {paths.map((path) => (
             <motion.path
@@ -62,7 +59,7 @@ export function FloatingPathsBackground({
           ))}
         </svg>
       </div>
-      <div className="relative z-10">{children}</div>
+      <div className="relative">{children}</div>
     </div>
   );
 }
