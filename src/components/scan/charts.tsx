@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
+import { SlidingNumber } from "@/components/ui/sliding-number";
 import type { Finding, Platform } from "@/lib/types";
 
 /** Colours shared by the donut, the bars and their legends. */
@@ -15,12 +17,21 @@ const bucketOf = (f: Finding): Bucket => (f.severity === "critical" ? "critical"
 export function KpiCard({ label, value, sub, tone, tile, Icon, glow = "", className = "" }: {
   label: string; value: string | number; sub?: string; tone: string; tile: string; Icon: LucideIcon; glow?: string; className?: string;
 }) {
+  // numbers roll up from 0 to their value when the card appears, and roll again when the value changes
+  const [shown, setShown] = useState(0);
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (typeof value === "number") setShown(value);
+  }, [value]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   return (
     <div className={`glass-card group relative flex items-start justify-between gap-3 overflow-hidden rounded-2xl p-5 transition-colors hover:border-white/20 ${className}`}>
       <div aria-hidden="true" className={`pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full opacity-60 blur-2xl transition-opacity group-hover:opacity-100 ${glow}`} />
       <div className="relative min-w-0">
         <div className="text-xs font-medium uppercase tracking-wider text-white/60">{label}</div>
-        <div className={`mt-2 font-heading text-5xl font-semibold leading-none tracking-tight ${tone}`}>{value}</div>
+        <div className={`mt-2 font-heading text-5xl font-semibold leading-none tracking-tight ${tone}`} aria-label={String(value)}>
+          {typeof value === "number" ? <span aria-hidden="true"><SlidingNumber value={shown} /></span> : value}
+        </div>
         {sub && <div className="mt-2.5 text-xs leading-snug text-white/60">{sub}</div>}
       </div>
       <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tile}`}>
