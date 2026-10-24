@@ -10,6 +10,9 @@ export const SEV_COLOR = {
 } as const;
 type Bucket = keyof typeof SEV_COLOR;
 
+/** Soft neon glow in the bar's own colour (tight halo plus a wide bloom). */
+const glow = (c: string) => `0 0 10px 0 ${c}cc, 0 0 26px 2px ${c}66`;
+
 const bucketOf = (f: Finding): Bucket => (f.severity === "critical" ? "critical" : f.severity === "high" ? "high" : "suspicious");
 
 /** Summary number with an icon tile and a soft glow in the severity colour, as in a dashboard stat card. */
@@ -59,23 +62,23 @@ export function RiskStrip({ critical, high, suspicious, safe, checked, seconds }
     <section className="glass-card rounded-2xl p-5 sm:p-6" aria-label="Scan summary">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
         <p className="text-sm text-white/80">
-          <span className="num text-3xl text-white"><CountUp to={flagged} digitEffect="slide" duration={1.4} /></span> flagged out of{" "}
-          <span className="num text-xl text-white"><CountUp to={checked} digitEffect="slide" duration={1.6} /></span> listings checked
+          <span className="num inline-flex align-middle text-3xl text-white"><CountUp to={flagged} digitEffect="slide" duration={1.4} /></span> flagged out of{" "}
+          <span className="num inline-flex align-middle text-xl text-white"><CountUp to={checked} digitEffect="slide" duration={1.6} /></span> listings checked
         </p>
         <p className="text-xs text-white/55">{safe} of your own assets recognised and skipped · scanned in {seconds.toFixed(1)}s</p>
       </div>
       <div
-        className="mt-4 flex h-3 overflow-hidden rounded-full bg-white/[0.07]"
+        className="mt-4 flex h-3 rounded-full bg-white/[0.07]"
         role="img"
         aria-label={`${critical} critical, ${high} high risk, ${suspicious} suspicious`}
       >
         {flagged > 0 &&
-          parts.map((p) => (p.n ? <span key={p.key} className="h-full" style={{ width: `${(p.n / flagged) * 100}%`, background: p.color }} /> : null))}
+          parts.map((p) => (p.n ? <span key={p.key} className="h-full first:rounded-l-full last:rounded-r-full" style={{ width: `${(p.n / flagged) * 100}%`, background: p.color, boxShadow: glow(p.color) }} /> : null))}
       </div>
       <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-white/70">
         {parts.map((p) => (
           <li key={p.key} className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: p.color }} />
+            <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: p.color, boxShadow: `0 0 8px 1px ${p.color}aa` }} />
             {p.label} <span className="num text-base text-white">{p.n}</span>
             <span className="num text-xs text-white/45">{flagged ? `${Math.round((p.n / flagged) * 100)}%` : "0%"}</span>
           </li>
@@ -105,12 +108,12 @@ export function PlatformBars({ findings, labels }: { findings: Finding[]; labels
         <li key={platform} className="flex items-center gap-3 text-xs">
           <span className="w-28 shrink-0 truncate text-white/75">{labels[platform]}</span>
           <div
-            className="flex h-3 flex-1 overflow-hidden rounded-full bg-white/[0.07]"
+            className="flex h-3 flex-1 rounded-full bg-white/[0.07]"
             role="img"
             aria-label={`${labels[platform]}: ${n.critical} critical, ${n.high} high risk, ${n.suspicious} suspicious`}
           >
             {(Object.keys(SEV_COLOR) as Bucket[]).map((b) =>
-              n[b] ? <span key={b} style={{ width: `${(n[b] / max) * 100}%`, background: SEV_COLOR[b] }} /> : null,
+              n[b] ? <span key={b} className="first:rounded-l-full last:rounded-r-full" style={{ width: `${(n[b] / max) * 100}%`, background: SEV_COLOR[b], boxShadow: glow(SEV_COLOR[b]) }} /> : null,
             )}
           </div>
           <span className="w-6 text-right font-semibold text-white">{total}</span>

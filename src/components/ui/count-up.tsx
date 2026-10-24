@@ -54,7 +54,7 @@ function OdometerDigit({ springValue, place }: OdometerDigitProps) {
         width: "1ch",
         overflowY: "clip",
         overflowX: "visible",
-        lineHeight: 1,
+        lineHeight: 1.15,
         fontVariantNumeric: "tabular-nums",
       }}
     >
