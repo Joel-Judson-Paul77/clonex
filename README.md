@@ -104,7 +104,7 @@ flowchart LR
 | `CLONEX_TAKEDOWN_MODE` | `demo` (default) or `live` |
 | `CLONEX_DEMO_INBOX` | Your own inbox for demo-mode notices |
 | `CLONEX_NOTIFY_KEY` | Enables `/api/notify` (scan alerts); callers send it as `x-clonex-key` |
-| `APIFY_ENABLED` / `APIFY_TOKEN` | Optional. Set `APIFY_ENABLED=true` and a token to add an Apify Google web search for scam-style phrases ("<brand> KYC update apk", "<brand> customer care number") next to the built-in sources. Two one-page queries, about half a cent and 25-30 s per scan; if Apify fails the scan continues without it. Keep the token server-side only |
+| `APIFY_ENABLED` / `APIFY_TOKEN` | Optional. Set `APIFY_ENABLED=true` and a token to add an Apify Google web search for a scam-style phrase ("<brand> KYC update apk") next to the built-in sources. One one-page query, about a quarter of a cent and 15-30 s per scan; if Apify fails the scan continues without it. Keep the token server-side only |
 | `SUPABASE_URL` | Project URL of the Supabase database that holds the shared case history |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side secret key for that project. Never expose it to the browser or commit it. Run `db/schema.sql` once in the Supabase SQL editor first |
 

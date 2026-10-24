@@ -1,7 +1,7 @@
 import type { Brand, Candidate, SourceStatus } from "./types";
 
-// Optional extra data source: a Google web search for scam-style phrases about the brand ("<brand> KYC update
-// apk", "<brand> customer care number"), run through the Apify actor apify/google-search-scraper. It finds
+// Optional extra data source: a Google web search for a scam-style phrase about the brand ("<brand> KYC update
+// apk"), run through the Apify actor apify/google-search-scraper. It finds
 // look-alike and spam pages that no app store or DNS check can see, including scam pages planted on hacked
 // third-party sites. It only ever ADDS candidates: the built-in sources stay the fallback, and a failure here
 // is reported in the source list and never stops the scan. Candidates go through the normal pipeline afterwards
@@ -13,13 +13,13 @@ import type { Brand, Candidate, SourceStatus } from "./types";
 export const APIFY_ACTOR = "apify~google-search-scraper";
 export const APIFY_LABEL = "Apify: Google web search";
 
-/** Limits per run. Each search page costs about $0.0018, so two queries of one page each cost under half a cent. */
-const MAX_QUERIES = 2;
+/** Limits per run. One search page costs about $0.0018. One query keeps the run short: two made it time out too often. */
+const MAX_QUERIES = 1;
 export const MAX_RESULTS = 20; // never read more than this many web results back
 // Apify rejects a per-run ceiling below $0.50 for this actor. The real spend is bounded by the two one-page
-// queries above (about $0.004); the ceiling is only a backstop.
+// query above (about $0.002); the ceiling is only a backstop.
 const MAX_SPEND_USD = "0.5";
-const ACTOR_TIMEOUT_S = 40; // Apify aborts the run after this long (a run normally takes about 25 s)
+const ACTOR_TIMEOUT_S = 40; // Apify aborts the run after this long
 const CLIENT_DEADLINE_MS = 45_000; // and so do we (the scan route has a 60 s budget)
 
 type Result = { candidates: Candidate[]; status: SourceStatus };
@@ -86,9 +86,9 @@ export function normalizeApifyPages(pages: unknown): Candidate[] {
   return [...out.values()];
 }
 
-/** Scam-style searches: the phrases fraudsters write pages and apps around. Two only, because each is paid for. */
+/** The scam-style search: the phrase fraudsters write fake download pages around. One only: each is paid for and slow. */
 export function apifyQueries(brand: Brand): string[] {
-  return [`${brand.name} KYC update apk`, `${brand.name} customer care number`].slice(0, MAX_QUERIES);
+  return [`${brand.name} KYC update apk`].slice(0, MAX_QUERIES);
 }
 
 /** Runs the actor once and returns its dataset items. Throws a short, secret-free message on any failure. */

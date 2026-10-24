@@ -5,8 +5,7 @@ import { mergeExtra } from "@/lib/connectors";
 import { officialReason, scoreCandidate } from "@/lib/scoring";
 import type { Brand, Candidate } from "@/lib/types";
 
-// tests/fixtures/apify-search-sample.json is real output of apify/google-search-scraper for the two queries
-// below (trimmed to the fields we read), saved once so the tests never call Apify.
+// tests/fixtures/apify-search-sample.json is real output of apify/google-search-scraper for two queries (trimmed to the fields we read), saved once so the tests never call Apify.
 
 const brand: Brand = {
   name: "Paytm",
@@ -97,7 +96,7 @@ describe("scanApify (never breaks the scan)", () => {
     expect(url).not.toContain(TOKEN);
     expect(url).toContain(APIFY_ACTOR);
     expect(url).toContain("timeout=40");
-    expect(url).toContain("maxItems=2");
+    expect(url).toContain("maxItems=1");
     expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${TOKEN}`);
     expect(String(init.body)).not.toContain(TOKEN);
     const body = JSON.parse(String(init.body));
