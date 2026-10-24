@@ -25,8 +25,13 @@ function GlowLine({ segments, total, label, className = "" }: {
 }) {
   const parts = segments.filter((p) => p.n > 0);
   return (
-    <div className={`relative flex h-6 items-center pr-2 ${className}`} role="img" aria-label={label}>
-      <div aria-hidden="true" className="absolute inset-x-0 h-[2px] rounded-full bg-white/10" />
+    <div className={`relative flex h-7 items-center pr-3 ${className}`} role="img" aria-label={label}>
+      {/* faint track with small waypoint dots, like the stops on a timeline */}
+      <div aria-hidden="true" className="absolute inset-x-0 h-[2px] rounded-full bg-white/10">
+        {[25, 50, 75].map((x) => (
+          <span key={x} className="absolute top-1/2 h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/25" style={{ left: `${x}%` }} />
+        ))}
+      </div>
       <div className="relative flex w-full items-center">
         {parts.map((p, i) => {
           const last = i === parts.length - 1;
@@ -34,16 +39,28 @@ function GlowLine({ segments, total, label, className = "" }: {
             <motion.span
               key={p.key}
               aria-hidden="true"
-              className="relative h-[2px] shrink-0"
-              style={{ background: `linear-gradient(90deg, ${p.color}33, ${p.color})`, boxShadow: glow(p.color) }}
+              className="relative h-[3px] shrink-0 rounded-full"
+              style={{ background: `linear-gradient(90deg, ${p.color}22, ${p.color})`, boxShadow: glow(p.color) }}
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(100, (p.n / Math.max(1, total)) * 100)}%` }}
-              transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: i * 0.12 }}
+              transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: i * 0.14 }}
             >
-              <span
-                className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 rounded-full bg-white ${last ? "h-3.5 w-3.5" : "h-2 w-2"}`}
-                style={{ boxShadow: last ? `0 0 12px 3px ${p.color}, 0 0 38px 10px ${p.color}88` : `0 0 10px 2px ${p.color}` }}
-              />
+              {/* bright white core so the stroke reads as a laser line */}
+              <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-transparent to-white/90" />
+              <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2">
+                {last && (
+                  <motion.span
+                    className="absolute -inset-2 rounded-full"
+                    style={{ background: p.color }}
+                    animate={{ scale: [0.7, 1.9, 0.7], opacity: [0.45, 0, 0.45] }}
+                    transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                )}
+                <span
+                  className={`relative block rounded-full bg-white ${last ? "h-4 w-4" : "h-2 w-2"}`}
+                  style={{ boxShadow: last ? `0 0 12px 3px ${p.color}, 0 0 44px 14px ${p.color}88` : `0 0 0 2px #0b0b0b, 0 0 10px 3px ${p.color}` }}
+                />
+              </span>
             </motion.span>
           );
         })}
