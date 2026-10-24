@@ -1,5 +1,8 @@
+"use client";
+
 import type { LucideIcon } from "lucide-react";
 import type { Finding, Platform } from "@/lib/types";
+import { motion } from "motion/react";
 import { CountUp } from "@/components/ui/count-up";
 
 /** Colours shared by the donut, the bars and their legends. */
@@ -12,6 +15,42 @@ type Bucket = keyof typeof SEV_COLOR;
 
 /** Soft neon glow in the bar's own colour (tight halo plus a wide bloom). */
 const glow = (c: string) => `0 0 10px 0 ${c}cc, 0 0 26px 2px ${c}66`;
+
+/**
+ * A thin neon line instead of a fat bar: each segment is a glowing stroke in its own colour that draws in
+ * from the left, with a node where it ends and a bright orb on the last one.
+ */
+function GlowLine({ segments, total, label, className = "" }: {
+  segments: { key: string; n: number; color: string }[]; total: number; label: string; className?: string;
+}) {
+  const parts = segments.filter((p) => p.n > 0);
+  return (
+    <div className={`relative flex h-6 items-center pr-2 ${className}`} role="img" aria-label={label}>
+      <div aria-hidden="true" className="absolute inset-x-0 h-[2px] rounded-full bg-white/10" />
+      <div className="relative flex w-full items-center">
+        {parts.map((p, i) => {
+          const last = i === parts.length - 1;
+          return (
+            <motion.span
+              key={p.key}
+              aria-hidden="true"
+              className="relative h-[2px] shrink-0"
+              style={{ background: `linear-gradient(90deg, ${p.color}33, ${p.color})`, boxShadow: glow(p.color) }}
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, (p.n / Math.max(1, total)) * 100)}%` }}
+              transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: i * 0.12 }}
+            >
+              <span
+                className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 rounded-full bg-white ${last ? "h-3.5 w-3.5" : "h-2 w-2"}`}
+                style={{ boxShadow: last ? `0 0 12px 3px ${p.color}, 0 0 38px 10px ${p.color}88` : `0 0 10px 2px ${p.color}` }}
+              />
+            </motion.span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 const bucketOf = (f: Finding): Bucket => (f.severity === "critical" ? "critical" : f.severity === "high" ? "high" : "suspicious");
 
@@ -67,14 +106,12 @@ export function RiskStrip({ critical, high, suspicious, safe, checked, seconds }
         </p>
         <p className="text-xs text-white/55">{safe} of your own assets recognised and skipped · scanned in {seconds.toFixed(1)}s</p>
       </div>
-      <div
-        className="mt-4 flex h-3 rounded-full bg-white/[0.07]"
-        role="img"
-        aria-label={`${critical} critical, ${high} high risk, ${suspicious} suspicious`}
-      >
-        {flagged > 0 &&
-          parts.map((p) => (p.n ? <span key={p.key} className="h-full first:rounded-l-full last:rounded-r-full" style={{ width: `${(p.n / flagged) * 100}%`, background: p.color, boxShadow: glow(p.color) }} /> : null))}
-      </div>
+      <GlowLine
+        className="mt-4"
+        total={flagged}
+        segments={flagged > 0 ? parts.map((p) => ({ key: p.key, n: p.n, color: p.color })) : []}
+        label={`${critical} critical, ${high} high risk, ${suspicious} suspicious`}
+      />
       <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-white/70">
         {parts.map((p) => (
           <li key={p.key} className="flex items-center gap-1.5">
@@ -107,16 +144,13 @@ export function PlatformBars({ findings, labels }: { findings: Finding[]; labels
       {list.map(({ platform, n, total }) => (
         <li key={platform} className="flex items-center gap-3 text-xs">
           <span className="w-28 shrink-0 truncate text-white/75">{labels[platform]}</span>
-          <div
-            className="flex h-3 flex-1 rounded-full bg-white/[0.07]"
-            role="img"
-            aria-label={`${labels[platform]}: ${n.critical} critical, ${n.high} high risk, ${n.suspicious} suspicious`}
-          >
-            {(Object.keys(SEV_COLOR) as Bucket[]).map((b) =>
-              n[b] ? <span key={b} className="first:rounded-l-full last:rounded-r-full" style={{ width: `${(n[b] / max) * 100}%`, background: SEV_COLOR[b], boxShadow: glow(SEV_COLOR[b]) }} /> : null,
-            )}
-          </div>
-          <span className="w-6 text-right font-semibold text-white">{total}</span>
+          <GlowLine
+            className="flex-1"
+            total={max}
+            segments={(Object.keys(SEV_COLOR) as Bucket[]).map((b) => ({ key: b, n: n[b], color: SEV_COLOR[b] }))}
+            label={`${labels[platform]}: ${n.critical} critical, ${n.high} high risk, ${n.suspicious} suspicious`}
+          />
+          <span className="num w-6 text-right text-base text-white">{total}</span>
         </li>
       ))}
     </ul>
