@@ -21,7 +21,7 @@ export function NeuroBackdrop({ radius = "rounded-3xl" }: { radius?: string }) {
   }, []);
 
   return (
-    <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden ${radius}`}>
+    <div aria-hidden="true" className={`theme-invert pointer-events-none absolute inset-0 overflow-hidden ${radius}`}>
       <NeuroNoise
         className="absolute inset-0 h-full w-full"
         style={{

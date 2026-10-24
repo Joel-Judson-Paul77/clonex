@@ -39,7 +39,7 @@ const NODES: Node[] = [
 function FlowLine({ d, gradientId, off, animate }: { d: string; gradientId: string; off?: boolean; animate: boolean }) {
   return (
     <>
-      <path d={d} stroke="rgba(255,255,255,0.14)" strokeWidth="1" fill="none" strokeDasharray={off ? "4 5" : undefined} />
+      <path d={d} className="stroke-white/15" strokeWidth="1" fill="none" strokeDasharray={off ? "4 5" : undefined} />
       {!off && animate && (
         <motion.path
           d={d}
@@ -66,11 +66,11 @@ function FlowDiagram() {
       role="img"
       aria-label="Diagram: the CloneX app and a password check feed the n8n workflow, which sends a Gmail message or saves a draft, can alert Telegram (currently off) and replies to CloneX."
     >
-      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 564 410" fill="none" aria-hidden="true">
+      <svg className="pointer-events-none absolute inset-0 h-full w-full text-white" viewBox="0 0 564 410" fill="none" aria-hidden="true">
         <defs>
           <linearGradient id={gradientId} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="564" y2="0">
             <stop offset="0%" stopColor="transparent" />
-            <stop offset="50%" stopColor="#ffffff" stopOpacity="0.85" />
+            <stop offset="50%" stopColor="currentColor" stopOpacity="0.85" />
             <stop offset="100%" stopColor="transparent" />
           </linearGradient>
         </defs>
@@ -166,7 +166,7 @@ export default function AutomationView() {
           <div
             aria-hidden="true"
             className="absolute inset-0 opacity-[0.12]"
-            style={{ backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)", backgroundSize: "28px 28px" }}
+            style={{ backgroundImage: "radial-gradient(circle, rgb(var(--ink)) 1px, transparent 1px)", backgroundSize: "28px 28px" }}
           />
           <div className="relative mx-auto max-w-2xl">
             <FlowDiagram />

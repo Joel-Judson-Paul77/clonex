@@ -39,7 +39,7 @@ function ScoreRing({ score, sev }: { score: number; sev: Severity }) {
   const r = 18, c = 2 * Math.PI * r;
   return (
     <svg width="60" height="60" viewBox="0 0 46 46" className="shrink-0 drop-shadow-lg" aria-label={`Risk score ${score} of 100`}>
-      <circle cx="23" cy="23" r={r} fill="none" stroke="#27272a" strokeWidth="4" />
+      <circle cx="23" cy="23" r={r} fill="none" stroke="currentColor" strokeWidth="4" className="text-white/15" />
       <circle cx="23" cy="23" r={r} fill="none" stroke={RING[sev]} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${(score / 100) * c} ${c}`} transform="rotate(-90 23 23)" />
       <text x="23" y="27.5" textAnchor="middle" className="fill-white text-[13px] font-bold">{score}</text>
     </svg>
@@ -221,7 +221,7 @@ function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending, 
         </div>
         <div className="flex shrink-0 flex-col gap-2">
           {t.report && status === "confirmed" && (
-            <button onClick={onReport} disabled={pending} className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-default disabled:bg-white/10 disabled:text-white/70">
+            <button onClick={onReport} disabled={pending} className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-always-white hover:bg-red-500 disabled:cursor-default disabled:bg-white/10 disabled:text-white/70">
               {pending ? "✓ Takedown pending" : "⚡ Initiate Takedown"}
             </button>
           )}

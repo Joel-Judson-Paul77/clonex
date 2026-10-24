@@ -13,9 +13,9 @@ const CHIP: Record<CaseStatus, string> = {
 const ACTION: Record<CaseStatus, { label: string; cls: string }> = {
   new: { label: "Reopen as new", cls: "btn-ghost" },
   "under-review": { label: "Start review", cls: "btn-ghost" },
-  confirmed: { label: "Confirm impersonation", cls: "bg-red-600 text-white hover:bg-red-500" },
+  confirmed: { label: "Confirm impersonation", cls: "bg-red-600 text-always-white hover:bg-red-500" },
   "false-positive": { label: "Mark false positive", cls: "btn-ghost" },
-  closed: { label: "Close case", cls: "bg-emerald-600 text-white hover:bg-emerald-500" },
+  closed: { label: "Close case", cls: "bg-emerald-600 text-always-white hover:bg-emerald-500" },
 };
 
 export function StatusChip({ status }: { status: CaseStatus }) {

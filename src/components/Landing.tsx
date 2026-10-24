@@ -2,6 +2,7 @@
 
 import { CrowdCanvas } from "@/components/ui/skiper39";
 import { FlowButton } from "@/components/ui/flow-button";
+import ThemeSwitch from "@/components/ThemeSwitch";
 
 // Black line-art crowd (Open Peeps), white-filled, so it stands out against the dark page.
 const CROWD_SRC = "https://cdn.21st.dev/assets/localized/abdb8990a7bef8c2f5af3e45f0a3c969c4b0603fba8be92e81347de4ea4e1ed7.png";
@@ -13,11 +14,12 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden">
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center gap-3 px-5 pt-8">
-        <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-          <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="white" strokeOpacity="0.55" strokeWidth="1.5" />
-          <rect x="10.5" y="10.5" width="19" height="19" rx="6" fill="white" />
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true" className="text-white">
+          <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="currentColor" strokeOpacity="0.55" strokeWidth="1.5" />
+          <rect x="10.5" y="10.5" width="19" height="19" rx="6" fill="currentColor" />
         </svg>
         <span className="text-xl font-semibold tracking-tight text-white">CloneX</span>
+        <ThemeSwitch className="ml-auto" />
       </header>
 
       <section className="relative z-10 mx-auto flex w-full max-w-4xl flex-1 flex-col items-center px-5 pt-10 text-center sm:pt-14">
@@ -48,7 +50,7 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
 
       {/* the crowd: everyone looks the same from a distance */}
       <div className="pointer-events-none relative mt-6 h-[42vh] w-full min-h-[260px]">
-        <div className="absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-[#030303] to-transparent" />
+        <div className="absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-background to-transparent" />
         <CrowdCanvas src={CROWD_SRC} rows={15} cols={7} className="absolute bottom-0 h-full w-full" />
       </div>
     </main>
