@@ -11,7 +11,6 @@ import VerifiedChannelsCard from "@/components/profile/VerifiedChannelsCard";
 import type { AutoState, Check, Checks, Kind } from "@/components/profile/shared";
 import type { BrandCard } from "@/lib/brand-types";
 import type { BrandProfile } from "@/lib/types";
-import { FloatingPathsBackground } from "@/components/ui/floating-paths";
 
 export const EMPTY_PROFILE: BrandProfile = {
   name: "",
@@ -230,7 +229,6 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
   const busy = Object.values(checks).some((c) => c.state === "checking");
 
   return (
-    <FloatingPathsBackground position={1} className="rounded-3xl" pathsClassName="opacity-70">
     <div className="space-y-6">
       {/* Step banner */}
       <div className="glass-card rounded-3xl p-6 sm:p-8">
@@ -310,6 +308,5 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
         </button>
       </div>
     </div>
-    </FloatingPathsBackground>
   );
 }
