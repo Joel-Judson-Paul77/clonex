@@ -9,6 +9,10 @@ import { appendEvent, dbEnabled, loadCases } from "@/lib/db";
 const STATUSES: CaseStatus[] = ["new", "under-review", "confirmed", "false-positive", "closed"];
 const NO_STORE = { "Cache-Control": "no-store" };
 
+/** A short, secret-free reason for the response (e.g. "database answered HTTP 401"). */
+const reason = (e: unknown) => (e instanceof Error ? e.message.slice(0, 120) : "unknown error");
+const unreachable = (e: unknown) => NextResponse.json({ error: "The case database could not be reached", detail: reason(e) }, { status: 502 });
+
 export async function GET(req: Request) {
   try {
     rateLimit(req, "cases-read", 120);
@@ -16,7 +20,7 @@ export async function GET(req: Request) {
     const brand = str(new URL(req.url).searchParams.get("brand") ?? "", "brand", { min: 1, max: 80 })!;
     return NextResponse.json({ enabled: true, cases: await loadCases(brand) }, { headers: NO_STORE });
   } catch (e) {
-    return errorResponse(e);
+    return e instanceof ApiError ? errorResponse(e) : unreachable(e);
   }
 }
 
@@ -41,7 +45,6 @@ export async function POST(req: Request) {
     await appendEvent(brand, findingId, record.history[record.history.length - 1]);
     return NextResponse.json({ ok: true, record });
   } catch (e) {
-    if (e instanceof ApiError) return errorResponse(e);
-    return NextResponse.json({ error: "The case database could not be reached" }, { status: 502 });
+    return e instanceof ApiError ? errorResponse(e) : unreachable(e);
   }
 }
