@@ -8,6 +8,8 @@ import type { BrandProfile, ExcludedItem, Finding, Platform, ScanResult, Severit
 import { profileToBrand } from "@/lib/types";
 import type { TakedownRecord, TakedownResponse } from "@/lib/takedown";
 import TakedownModal from "@/components/scan/TakedownModal";
+import { CaseActions, CaseHistory, StatusChip } from "@/components/scan/CaseControls";
+import { addEvent, byPriority, isOpen, pendingAlerts, statusOf, transition, type CaseMap, type CaseRecord, type CaseStatus } from "@/lib/cases";
 
 const PLATFORM: Record<Platform, string> = {
   "app-store": "Apple App Store",
@@ -56,6 +58,7 @@ function plainReason(s: Signal, f: Finding): string | null {
     case "link": return "Links to an unofficial website";
     case "age": return `New account (${s.detail.replace("Created ", "").toLowerCase()})`;
     case "cert": return "New certificate on a look-alike domain";
+    case "dns": return "Registered look-alike domain";
     case "reach": return "Very few ratings";
     case "lang":
       if (/KYC/.test(s.label)) return "KYC scam trigger word";
@@ -111,7 +114,7 @@ function takedownReport(f: Finding, brand: string): string {
     .join("\n");
 }
 
-function Evidence({ f, officialLogo }: { f: Finding; officialLogo?: string }) {
+function Evidence({ f, officialLogo, record }: { f: Finding; officialLogo?: string; record?: CaseRecord }) {
   const maxW = Math.max(...f.signals.map((s) => s.weight), 1);
   return (
     <div className="grid gap-6 border-t border-white/10 p-4 md:grid-cols-[1.4fr_1fr]">
@@ -168,6 +171,10 @@ function Evidence({ f, officialLogo }: { f: Finding; officialLogo?: string }) {
         {f.url && f.source === "live" && (
           <a href={f.url} target="_blank" rel="noreferrer" className="inline-block text-xs text-white/70 hover:underline">Open listing ↗</a>
         )}
+        <div className="text-[11px] text-white/55">
+          <span className="font-semibold text-white/75">Source:</span> {PLATFORM[f.platform]} ({f.source}) · <span className="font-mono">{f.handle ?? f.id}</span>
+        </div>
+        <CaseHistory record={record} />
       </div>
     </div>
   );
@@ -180,9 +187,11 @@ const TONES = {
   suspicious: { border: "border-amber-500/20", chip: "bg-amber-500/10 text-amber-200", edge: "via-amber-300/70", wash: "from-amber-400/[0.05]", report: false },
 } as const;
 
-function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending }: {
+function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending, record, onMove }: {
   f: Finding; tone: keyof typeof TONES; officialLogo?: string; open: boolean; onToggle: () => void; onReport: () => void; pending?: boolean;
+  record?: CaseRecord; onMove: (to: CaseStatus) => void;
 }) {
+  const status = record?.status ?? "new";
   const reasons = reasonsOf(f);
   const t = TONES[tone];
   return (
@@ -194,6 +203,7 @@ function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending }
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-base font-semibold text-white">{f.name}</span>
             <SourceBadge live={f.source === "live"} />
+            <StatusChip status={status} />
             {pending && <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-sky-300">TAKEDOWN PENDING</span>}
           </div>
           <div className="mt-0.5 text-xs text-white/55">
@@ -204,9 +214,10 @@ function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending }
               <span key={r} className={`rounded-full px-3 py-1 text-xs font-medium ${t.chip}`}>{r}</span>
             ))}
           </div>
+          <div className="mt-3"><CaseActions status={status} onMove={onMove} /></div>
         </div>
         <div className="flex shrink-0 flex-col gap-2">
-          {t.report && (
+          {t.report && status === "confirmed" && (
             <button onClick={onReport} disabled={pending} className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-500 disabled:cursor-default disabled:bg-white/10 disabled:text-white/70">
               {pending ? "✓ Takedown pending" : "⚡ Initiate Takedown"}
             </button>
@@ -216,7 +227,7 @@ function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending }
           </button>
         </div>
       </div>
-      {open && <Evidence f={f} officialLogo={officialLogo} />}
+      {open && <Evidence f={f} officialLogo={officialLogo} record={record} />}
     </div>
   );
 }
@@ -329,6 +340,25 @@ function SafeList({ items }: { items: ExcludedItem[] }) {
 
 const LAST_SCAN_KEY = "clonex.lastscan.v1";
 const TAKEDOWNS_KEY = "clonex.takedowns.v1";
+const CASES_KEY = "clonex.cases.v1";
+const ALERTED_KEY = "clonex.alerted.v1";
+const ANALYST_KEY = "clonex.analyst.v1";
+
+function readJson<T>(key: string, fallback: T): T {
+  try {
+    return (JSON.parse(localStorage.getItem(key) ?? "null") as T) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJson(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* storage unavailable: decisions still show, they just won't survive a refresh */
+  }
+}
 
 export default function ScanView({ profile }: { profile: BrandProfile }) {
   const [loading, setLoading] = useState(false);
@@ -352,7 +382,61 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
       return {};
     }
   });
+  // Analyst decisions and the per-case history, kept per brand across refreshes.
+  const casesKey = `${CASES_KEY}:${profile.name}`;
+  const alertedKey = `${ALERTED_KEY}:${profile.name}`;
+  const [cases, setCases] = useState<CaseMap>(() => readJson<CaseMap>(casesKey, {}));
+  const [analyst, setAnalyst] = useState(() => readJson<string>(ANALYST_KEY, ""));
+  const [statusView, setStatusView] = useState<"open" | CaseStatus | "all">("open");
+  const saveCases = (next: CaseMap) => {
+    setCases(next);
+    writeJson(casesKey, next);
+  };
+  const who = analyst.trim() || "Analyst";
   const [toast, setToast] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
+  // When the Postgres database is configured on the server, every analyst shares one case history (refreshed every
+  // 15 seconds). Otherwise the history lives in this browser only.
+  const [shared, setShared] = useState(false);
+  useEffect(() => {
+    let live = true;
+    const load = async () => {
+      try {
+        const r = await fetch(`/api/cases?brand=${encodeURIComponent(profile.name)}`, { cache: "no-store" });
+        const j = await r.json();
+        if (live && j.enabled) {
+          setShared(true);
+          setCases(j.cases);
+        }
+      } catch {
+        /* database unreachable: keep working from this browser's copy */
+      }
+    };
+    void load();
+    const t = setInterval(load, 15000);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, [profile.name]);
+  const record = async (id: string, body: { to?: CaseStatus; note?: string }) => {
+    if (!shared) {
+      saveCases(body.to ? transition(cases, id, body.to, who) : addEvent(cases, id, who, body.note ?? ""));
+      return;
+    }
+    try {
+      const r = await fetch("/api/cases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand: profile.name, findingId: id, by: who, ...body }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error ?? "save failed");
+      setCases((c) => ({ ...c, [id]: j.record }));
+    } catch (e) {
+      setToast({ tone: "warn", text: `Could not save that decision: ${e instanceof Error ? e.message : "unknown error"}` });
+    }
+  };
+  const move = (id: string, to: CaseStatus) => void record(id, { to });
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 7000);
@@ -367,6 +451,7 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
     }
     const next = { ...takedowns, [f.id]: { status: "pending" as const, at: new Date().toISOString(), mode: res.mode } };
     setTakedowns(next);
+    void record(f.id, { note: `Takedown notice dispatched (${res.mode})` });
     try {
       localStorage.setItem(TAKEDOWNS_KEY, JSON.stringify(next));
     } catch {
@@ -374,9 +459,7 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
     }
     setToast({
       tone: "ok",
-      text: res.mode === "demo"
-        ? "⚡ Takedown notice dispatched via n8n workflow (demo mode: sent to your test inbox, not the platform)."
-        : "⚡ Takedown notice successfully dispatched via n8n workflow to platform support.",
+      text: `⚡ ${res.message}`,
     });
   };
   const [simulate, setSimulate] = useState(true);
@@ -404,6 +487,13 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
       if (!r.ok) throw new Error(j.error ?? "Scan failed");
       setResult(j);
       setOpen(null);
+      // Alert once per high-risk detection: remember which ones already alerted so a re-scan stays quiet.
+      const alerted = new Set(readJson<string[]>(alertedKey, []));
+      const fresh = pendingAlerts((j as ScanResult).findings, alerted);
+      if (fresh.length) {
+        writeJson(alertedKey, [...alerted, ...fresh.map((x) => x.id)]);
+        setToast({ tone: "warn", text: `🚨 ${fresh.length} new high-risk detection${fresh.length === 1 ? "" : "s"}. Highest: ${fresh[0].name} (score ${fresh[0].score}).` });
+      }
       try {
         localStorage.setItem(LAST_SCAN_KEY, JSON.stringify({ name: profile.name, result: j }));
       } catch {
@@ -416,9 +506,17 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
     }
   };
 
-  const critical = result?.findings.filter((f) => f.severity === "critical") ?? [];
-  const high = result?.findings.filter((f) => f.severity === "high") ?? [];
-  const suspicious = result?.findings.filter((f) => f.severity === "medium" || f.severity === "low") ?? [];
+  // The queue: highest risk first, and false positives or closed cases drop out unless the analyst asks for them.
+  const inView = (f: Finding) => {
+    const s = statusOf(cases, f.id);
+    return statusView === "all" ? true : statusView === "open" ? isOpen(s) : s === statusView;
+  };
+  const queue = byPriority((result?.findings ?? []).filter(inView));
+  const critical = queue.filter((f) => f.severity === "critical");
+  const high = queue.filter((f) => f.severity === "high");
+  const suspicious = queue.filter((f) => f.severity === "medium" || f.severity === "low");
+  const count = (s: CaseStatus) => (result?.findings ?? []).filter((f) => statusOf(cases, f.id) === s).length;
+  const openCount = (result?.findings ?? []).filter((f) => isOpen(statusOf(cases, f.id))).length;
   const excluded = result?.excludedItems ?? [];
 
   return (
@@ -454,6 +552,19 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-3">
+            <label className="text-xs text-white/75">
+              Analyst name
+              <input
+                value={analyst}
+                onChange={(e) => {
+                  setAnalyst(e.target.value);
+                  writeJson(ANALYST_KEY, e.target.value);
+                }}
+                placeholder="e.g. Joel"
+                maxLength={40}
+                className="mt-1 block w-36 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-sm text-white placeholder:text-white/40"
+              />
+            </label>
             <label className="flex cursor-pointer items-center gap-3 text-xs text-white/75">
               <input type="checkbox" role="switch" checked={simulate} onChange={(e) => setSimulate(e.target.checked)} className="peer sr-only" />
               <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-white/15 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-emerald-400/80 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-white peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black" />
@@ -520,7 +631,31 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
             </Panel>
           </div>
 
-          <div role="group" aria-label="Show findings" className="flex flex-wrap items-center gap-2 pt-2">
+          <div role="group" aria-label="Case status" className="flex flex-wrap items-center gap-2 pt-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-white/55">Queue</span>
+            {(
+              [
+                ["open", "Open queue", openCount],
+                ["under-review", "Under review", count("under-review")],
+                ["confirmed", "Confirmed", count("confirmed")],
+                ["false-positive", "False positives", count("false-positive")],
+                ["closed", "Closed", count("closed")],
+                ["all", "All cases", result.findings.length],
+              ] as const
+            ).map(([id, label, n]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={statusView === id}
+                onClick={() => setStatusView(id)}
+                className={`rounded-full border px-4 py-1.5 text-xs font-medium transition-colors ${statusView === id ? "border-white bg-white text-black" : "border-white/15 bg-white/[0.04] text-white/75 hover:bg-white/10 hover:text-white"}`}
+              >
+                {label} <span className={statusView === id ? "text-black/60" : "text-white/50"}>{n}</span>
+              </button>
+            ))}
+          </div>
+
+          <div role="group" aria-label="Show findings" className="flex flex-wrap items-center gap-2">
             {(
               [
                 ["all", "All", critical.length + high.length + suspicious.length + excluded.length],
@@ -545,21 +680,21 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
           <Group show={view === "all" || view === "critical"} dot="bg-red-400" title="Critical Threats" subtitle="Risk score 75 or more: a close look-alike plus evidence such as a copied logo, scam wording or an unofficial phone number." count={critical.length} tone="text-red-300">
             {critical.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No critical threats in this scan.</p>}
             <Limited items={critical} render={(f) => (
-              <ThreatCard key={f.id} f={f} tone="critical" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} />
+              <ThreatCard key={f.id} f={f} tone="critical" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} />
             )} />
           </Group>
 
           <Group show={view === "all" || view === "high"} dot="bg-orange-400" title="High Risk" subtitle="Risk score 55 to 74: likely impersonation. Check the evidence, then report." count={high.length} tone="text-orange-300">
             {high.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No high-risk listings in this scan.</p>}
             <Limited items={high} render={(f) => (
-              <ThreatCard key={f.id} f={f} tone="high" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} />
+              <ThreatCard key={f.id} f={f} tone="high" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} />
             )} />
           </Group>
 
           <Group show={view === "all" || view === "suspicious"} dot="bg-amber-300" title="Suspicious Listings" subtitle="Risk score below 55: look-alike or misspelled names with weaker evidence. Review before acting." count={suspicious.length} tone="text-amber-300">
             {suspicious.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No suspicious listings in this scan.</p>}
             <Limited items={suspicious} render={(f) => (
-              <ThreatCard key={f.id} f={f} tone="suspicious" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} />
+              <ThreatCard key={f.id} f={f} tone="suspicious" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} />
             )} />
           </Group>
 

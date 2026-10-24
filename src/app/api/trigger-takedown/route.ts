@@ -81,9 +81,14 @@ export async function POST(req: Request) {
         const res: TakedownResponse = { ok: false, status: "failed", mode: m, desk, message: `n8n answered with HTTP ${r.status}. The notice was not confirmed as sent.` };
         return NextResponse.json(res, { status: 502 });
       }
+      // What n8n actually did: "emailed" or "drafted" when Gmail is connected, "logged" for the webhook-only workflow.
+      const answer = (await r.json().catch(() => null)) as { action?: string } | null;
+      const logged = answer?.action === "logged";
       const res: TakedownResponse = {
         ok: true, status: "dispatched", mode: m, desk,
-        message: m === "demo" ? "Sent through n8n to your test inbox (demo mode: nothing went to the platform)." : "Sent through n8n to the platform's abuse desk.",
+        message: logged
+          ? `Received and logged by n8n (${m} mode: no email was sent and nothing went to the platform).`
+          : m === "demo" ? "Sent through n8n to your test inbox (demo mode: nothing went to the platform)." : "Sent through n8n to the platform's abuse desk.",
       };
       return NextResponse.json(res);
     } catch {

@@ -151,7 +151,11 @@ export function scoreCandidate(c: Candidate, brand: Brand): Finding | null {
     signals.push({ key: "reach", label: "Few ratings", weight: 4, detail: `${c.ratings ?? 0} ratings, unlike an established app` });
   }
   if (c.kind === "domain") {
-    signals.push({ key: "cert", label: "Certificate issued for look-alike host", weight: 10, detail: "Found in public certificate-transparency logs" });
+    if (c.description?.startsWith("Registered look-alike domain")) {
+      signals.push({ key: "dns", label: "Look-alike domain is registered and live", weight: 10, detail: c.description });
+    } else {
+      signals.push({ key: "cert", label: "Certificate issued for look-alike host", weight: 10, detail: "Found in public certificate-transparency logs" });
+    }
   }
 
   // 6. Description-embedded links to non-official domains (+8)

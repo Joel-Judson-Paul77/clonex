@@ -1,0 +1,77 @@
+{
+  "name": "CloneX - Takedown Dispatch (webhook only)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clonex-takedown",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000001",
+      "name": "Takedown Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "clonex-takedown"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise the CloneX takedown payload and build the email + team alert.\nconst b = $input.first().json.body ?? $input.first().json;\nconst demo = b.mode !== \"live\";\nconst desk = b.intendedDesk || {};\nconst subject = (demo ? \"[CLONEX DEMO] \" : \"\") + 'Impersonation report: \"' + b.threatTitle + '\" impersonating ' + b.brandName + \" (\" + b.platform + \")\";\nconst fallback =\n  \"Hello Trust & Safety team,\\n\\nWe represent \" + b.brandName + \" and are reporting \" + b.threatTitle +\n  (b.detectedArtifact ? \" (\" + b.detectedArtifact + \")\" : \"\") + \" on \" + b.platform +\n  \", which impersonates our brand.\" + (b.evidenceUrl ? \"\\nEvidence: \" + b.evidenceUrl : \"\") +\n  \"\\nRisk score: \" + b.riskScore + \"/100.\\n\\nWe ask that you review and remove it under your impersonation policy.\";\nlet message = b.noticeText && b.noticeText.trim().length > 20 ? b.noticeText : fallback;\nif (demo) message = \"DEMO MODE: this notice was NOT sent to \" + (desk.desk || \"the platform\") + \".\\n\\n\" + message;\nif (!b.to && desk.formUrl) message += \"\\n\\nThis platform takes reports through a web form: \" + desk.formUrl;\nconst alert = \"CloneX takedown\" + (demo ? \" (demo)\" : \"\") + \" | \" + b.brandName + \": \" + b.threatTitle + \" on \" + b.platform +\n  \", risk \" + b.riskScore + \"/100. \" + (b.to ? \"Notice emailed to \" + b.to + \".\" : \"Notice saved as a Gmail draft for review.\");\nreturn [{ json: { ok: true, mode: b.mode, to: b.to || \"\", subject, message, alert, platform: b.platform } }];"
+      },
+      "id": "b2000000-0000-4000-8000-000000000002",
+      "name": "Prepare notice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true, mode: $('Prepare notice').item.json.mode, action: 'logged' } }}",
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000007",
+      "name": "Respond to CloneX",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Takedown Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare notice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare notice": {
+      "main": [
+        [
+          {
+            "node": "Respond to CloneX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

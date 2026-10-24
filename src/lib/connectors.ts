@@ -1,5 +1,6 @@
 import type { Brand, Candidate, Platform, SourceStatus } from "./types";
 import { generateVariants, nameSimilarity } from "./lookalike";
+import { scanLookalikeDomains } from "./domains";
 
 type Result = { candidates: Candidate[]; status: SourceStatus };
 
@@ -264,6 +265,25 @@ export async function scanCertTransparency(brand: Brand): Promise<Result> {
   return fail("domain", "unreachable");
 }
 
+/** Look-alike domains from two independent sources: the certificate logs (often down) and a direct DNS check of
+ *  typo / scam-word variants of the brand's domain. The source counts as working if either one answered. */
+export async function scanDomains(brand: Brand): Promise<Result> {
+  const cert = scanCertTransparency(brand);
+  const [ct, dnsScan] = await Promise.all([
+    Promise.race([cert, new Promise<Result>((res) => setTimeout(() => res(fail("domain", "certificate log timed out")), 5000))]),
+    scanLookalikeDomains(brand).catch(() => ({ candidates: [], checked: 0, ok: false })),
+  ]);
+  const byId = new Map<string, Candidate>();
+  for (const c of [...ct.candidates, ...dnsScan.candidates]) if (!byId.has(c.id)) byId.set(c.id, c);
+  const candidates = [...byId.values()].sort((a, b) => nameSimilarity(b.name.split(".")[0], brand.name) - nameSimilarity(a.name.split(".")[0], brand.name)).slice(0, 40);
+  const ok = ct.status.ok || dnsScan.ok;
+  const notes = [
+    ct.status.ok ? `${ct.status.note ?? "certificate log answered"}` : `certificate log unavailable (${ct.status.note ?? "no answer"})`,
+    dnsScan.ok ? `${dnsScan.checked} look-alike domains checked in DNS, ${dnsScan.candidates.length} registered` : "DNS check unavailable",
+  ];
+  return { candidates, status: { platform: "domain", source: "live", ok, count: candidates.length, note: notes.join("; ") } };
+}
+
 // ---- Resilience: remember the last good result per source and fall back to it -----------------
 // Live sources (esp. unofficial/public ones) can be slow or rate-limited. A scan must still
 // work, so when a source fails we serve its last successful snapshot, clearly marked CACHED.
@@ -293,7 +313,7 @@ async function timed(fn: (b: Brand) => Promise<Result>, brand: Brand): Promise<R
   const t0 = Date.now();
   // A slow source must never hold the whole scan hostage. The certificate-log source is optional and often down,
   // so it gets a short leash and falls back to its cached snapshot.
-  const DEADLINE = fn.name === "scanCertTransparency" ? 6000 : 20000;
+  const DEADLINE = fn.name === "scanDomains" ? 10000 : fn.name === "scanCertTransparency" ? 6000 : 20000;
   const withDeadline = (p: Promise<Result>, platform: Platform): Promise<Result> =>
     Promise.race([
       p,
@@ -330,6 +350,6 @@ export async function scanAllLive(brand: Brand): Promise<Result[]> {
     timed(scanPlayStore, brand),
     timed(scanBluesky, brand),
     timed(scanTelegram, brand),
-    timed(scanCertTransparency, brand),
+    timed(scanDomains, brand),
   ]);
 }
