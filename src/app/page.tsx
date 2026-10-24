@@ -81,6 +81,18 @@ export default function Home() {
     window.scrollTo(0, 0);
   };
 
+  // Clicking the CloneX title returns to the opening page (with the news articles). The brand and scan stay in
+  // memory, so "Enter CloneX" brings the analyst back to where they were.
+  const goHome = () => {
+    setEntered(false);
+    try {
+      sessionStorage.removeItem(ENTERED_KEY);
+    } catch {
+      /* ignore */
+    }
+    window.scrollTo(0, 0);
+  };
+
   if (!ready) return null;
   if (!entered) return <Landing onEnter={enter} />;
 
@@ -90,13 +102,15 @@ export default function Home() {
         Skip to content
       </a>
       <header className="z-40 -mx-5 lg:sticky lg:top-0 mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-white/[0.06] bg-[var(--header-bg)] px-5 py-4 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true" className="text-white">
-            <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="currentColor" strokeOpacity="0.55" strokeWidth="1.5" />
-            <rect x="10.5" y="10.5" width="19" height="19" rx="6" fill="currentColor" />
-          </svg>
-          <h1 className="text-xl font-semibold tracking-tight text-white">CloneX</h1>
-        </div>
+        <h1 className="text-xl font-semibold tracking-tight text-white">
+          <button type="button" onClick={goHome} title="Back to the opening page" aria-label="CloneX: back to the opening page" className="flex items-center gap-3 rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+            <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true" className="text-white">
+              <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="currentColor" strokeOpacity="0.55" strokeWidth="1.5" />
+              <rect x="10.5" y="10.5" width="19" height="19" rx="6" fill="currentColor" />
+            </svg>
+            CloneX
+          </button>
+        </h1>
         <nav aria-label="Workflow steps" className="order-last grid w-full sm:order-none grid-cols-4 items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm sm:flex sm:w-auto">
           {STEPS.map((s, i) => {
             const locked = s.id === "monitor" && !profile;

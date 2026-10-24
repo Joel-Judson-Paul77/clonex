@@ -570,7 +570,7 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
           </div>
 
           <div className="ml-auto flex flex-wrap items-center gap-x-5 gap-y-3">
-            <label className="text-xs text-white/75">
+            <label className="text-sm text-white/80">
               Analyst name
               <input
                 value={analyst}
@@ -580,15 +580,15 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
                 }}
                 placeholder="e.g. Joel"
                 maxLength={40}
-                className="mt-1 block w-36 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-sm text-white placeholder:text-white/40"
+                className="mt-1 block w-40 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-base text-white placeholder:text-white/40"
               />
             </label>
-            <label className="flex cursor-pointer items-center gap-3 text-xs text-white/75">
+            <label className="flex cursor-pointer items-center gap-3 text-sm text-white/80">
               <input type="checkbox" role="switch" checked={simulate} onChange={(e) => setSimulate(e.target.checked)} className="peer sr-only" />
               <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-white/15 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:bg-emerald-400/80 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-white peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-black" />
               <span>
                 Simulated Instagram &amp; X
-                <span className="block text-[11px] text-white/50">demo data, clearly labelled</span>
+                <span className="block text-[13px] text-white/60">demo data, clearly labelled</span>
               </span>
             </label>
             <button onClick={run} disabled={loading} className="btn-primary px-7 py-3.5 text-sm shadow-lg shadow-white/10 disabled:opacity-60">
