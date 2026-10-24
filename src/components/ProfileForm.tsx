@@ -230,7 +230,7 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
   const busy = Object.values(checks).some((c) => c.state === "checking");
 
   return (
-    <FloatingPathsBackground position={1} className="rounded-3xl" pathsClassName="opacity-70">
+    <FloatingPathsBackground position={1} fixed pathsClassName="opacity-90">
     <div className="space-y-6">
       {/* Step banner */}
       <div className="glass-card rounded-3xl p-6 sm:p-8">
