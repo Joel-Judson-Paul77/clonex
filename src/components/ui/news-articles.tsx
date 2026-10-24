@@ -83,7 +83,7 @@ function ArticleRow({ a, index }: { a: NewsArticle; index: number }) {
 /** "In the news": real articles on phishing and impersonation scams in India, each linking to its publisher. */
 export function NewsArticles({ articles = NEWS, className }: { articles?: NewsArticle[]; className?: string }) {
   return (
-    <section aria-labelledby="news-title" className={cn("relative z-10 px-5 py-20 sm:px-8 lg:px-16", className)}>
+    <section id="in-the-news" aria-labelledby="news-title" className={cn("relative z-10 px-5 py-20 sm:px-8 lg:px-16", className)}>
       <div className="mx-auto max-w-6xl">
         <div className="mb-14 text-center">
           <p className="inline-flex items-center gap-2 font-mono text-sm font-semibold uppercase tracking-widest text-white/60">

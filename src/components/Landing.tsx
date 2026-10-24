@@ -44,8 +44,15 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
         <p className="mt-8 max-w-xl text-sm text-white/55">
           CloneX searches app stores and social platforms, compares names and logos, and shows you exactly what to report.
         </p>
-        <div className="mt-6">
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <FlowButton onClick={onEnter}>Enter CloneX</FlowButton>
+          <button
+            type="button"
+            onClick={() => document.getElementById("in-the-news")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            className="btn-ghost px-5 py-3 text-sm"
+          >
+            Articles ↓
+          </button>
         </div>
       </section>
 
