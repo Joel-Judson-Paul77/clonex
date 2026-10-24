@@ -5,11 +5,16 @@ import { FlowButton } from "@/components/ui/flow-button";
 import ThemeSwitch from "@/components/ThemeSwitch";
 import { NewsArticles } from "@/components/ui/news-articles";
 import { CountUp } from "@/components/ui/count-up";
+import { useRef } from "react";
+import { motion, useScroll, useTransform } from "motion/react";
 
 // Black line-art crowd (Open Peeps), white-filled, so it stands out against the dark page.
 const CROWD_SRC = "https://cdn.21st.dev/assets/localized/abdb8990a7bef8c2f5af3e45f0a3c969c4b0603fba8be92e81347de4ea4e1ed7.png";
 
 const THREATS = ["Fake apps", "Cloned accounts", "Look-alike domains", "Scam support numbers"];
+
+/** Glow colour of the timeline (electric blue, so it reads against the white-on-black page). */
+const ACCENT = "#5b8cff";
 
 const STEPS = [
   { to: 5, unit: "sources", title: "Search", body: "App Store, Google Play, Bluesky, Telegram and look-alike domains, all at once." },
@@ -19,6 +24,9 @@ const STEPS = [
 
 /** Opening page: states the problem over the crowd, then leads into the CloneX workflow. */
 export default function Landing({ onEnter }: { onEnter: () => void }) {
+  const railRef = useRef<HTMLOListElement>(null);
+  const { scrollYProgress } = useScroll({ target: railRef, offset: ["start 65%", "end 55%"] });
+  const fill = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
   return (
     <main className="relative flex min-h-screen flex-col overflow-hidden">
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center gap-3 px-5 pt-8">
@@ -69,21 +77,46 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
         <CrowdCanvas src={CROWD_SRC} rows={15} cols={7} className="absolute bottom-0 h-full w-full" />
       </div>
 
-      {/* numbers: what one scan covers (figures taken from the product itself) */}
-      <section aria-label="What CloneX does" className="relative z-10 mx-auto w-full max-w-6xl px-5 py-20 sm:py-28">
+      {/* numbers: what one scan covers (figures taken from the product itself), on a glowing scroll timeline */}
+      <section aria-label="What CloneX does" className="relative z-10 mx-auto w-full max-w-4xl px-5 py-20 sm:py-28">
         <p className="eyebrow text-center">How it works</p>
-        <ol className="mt-10 grid gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 sm:grid-cols-3">
+        <ol ref={railRef} className="relative mt-12 flex flex-col gap-14 pl-12 sm:gap-20 sm:pl-16">
+          {/* the rail: a faint track, a glowing fill that grows with scroll, and a bright orb riding its tip */}
+          <div aria-hidden="true" className="absolute bottom-2 left-[11px] top-2 w-[2px] rounded-full bg-white/10 sm:left-[15px]">
+            <motion.div
+              className="absolute inset-x-0 top-0 rounded-full"
+              style={{
+                height: fill,
+                background: `linear-gradient(to bottom, transparent, ${ACCENT})`,
+                boxShadow: `0 0 10px 1px ${ACCENT}, 0 0 28px 3px ${ACCENT}77`,
+              }}
+            />
+            <motion.span
+              className="absolute -left-[7px] h-4 w-4 -translate-y-1/2 rounded-full bg-white"
+              style={{ top: fill, boxShadow: `0 0 12px 3px ${ACCENT}, 0 0 42px 12px ${ACCENT}88` }}
+            />
+          </div>
           {STEPS.map((s, i) => (
-            <li key={s.title} className="flex flex-col gap-5 bg-background p-7 sm:p-9">
-              <span className="num text-sm text-white/40">0{i + 1}</span>
-              <div className="num flex items-baseline gap-2 text-6xl text-white sm:text-7xl">
-                {s.prefix && <span className="text-3xl text-white/45 sm:text-4xl">{s.prefix}</span>}
-                <CountUp to={s.to} digitEffect="slide" duration={1.6} delay={i * 0.15} />
-                <span className="text-2xl text-white/45 sm:text-3xl">{s.unit}</span>
+            <li key={s.title} className="relative grid gap-4 sm:grid-cols-[minmax(0,15rem)_1fr] sm:items-center sm:gap-10">
+              <motion.span
+                aria-hidden="true"
+                className="absolute -left-[41px] top-4 h-2.5 w-2.5 rounded-full bg-white/25 sm:-left-[53px]"
+                initial={false}
+                whileInView={{ backgroundColor: ACCENT, boxShadow: `0 0 12px 2px ${ACCENT}` }}
+                viewport={{ margin: "0px 0px -45% 0px" }}
+                transition={{ duration: 0.4 }}
+              />
+              <div>
+                <span className="num text-sm" style={{ color: ACCENT }}>0{i + 1}</span>
+                <div className="num mt-2 flex items-baseline gap-2 text-6xl text-white sm:text-7xl">
+                  {s.prefix && <span className="text-3xl text-white/45 sm:text-4xl">{s.prefix}</span>}
+                  <CountUp to={s.to} digitEffect="slide" duration={1.6} delay={i * 0.15} />
+                  <span className="text-2xl text-white/45 sm:text-3xl">{s.unit}</span>
+                </div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">{s.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-white/60">{s.body}</p>
+                <h3 className="text-xl font-semibold text-white">{s.title}</h3>
+                <p className="mt-2 max-w-md text-sm leading-relaxed text-white/60">{s.body}</p>
               </div>
             </li>
           ))}
