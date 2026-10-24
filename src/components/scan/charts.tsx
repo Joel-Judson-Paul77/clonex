@@ -1,6 +1,6 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
+import { ShieldAlert, type LucideIcon } from "lucide-react";
 import type { Finding, Platform } from "@/lib/types";
 import { motion } from "motion/react";
 import { CountUp } from "@/components/ui/count-up";
@@ -27,7 +27,7 @@ function GlowLine({ segments, total, label, className = "", ruler = false }: {
     <div className={className} role="img" aria-label={label}>
       <div
         aria-hidden="true"
-        className="flex h-2 overflow-hidden rounded-[3px] border border-white/10"
+        className="flex h-2.5 overflow-hidden rounded-[3px] border border-white/10"
         style={{ backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.07) 0 2px, transparent 2px 6px)" }}
       >
         {parts.map((p, i) => (
@@ -97,26 +97,37 @@ export function RiskStrip({ critical, high, suspicious, safe, checked, seconds }
   ];
   return (
     <section className="glass-card rounded-2xl p-5 sm:p-6" aria-label="Scan summary">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-        <p className="text-sm text-white/80">
-          <span className="num inline-flex align-middle text-3xl text-white"><CountUp to={flagged} digitEffect="slide" duration={1.4} /></span> flagged out of{" "}
-          <span className="num inline-flex align-middle text-xl text-white"><CountUp to={checked} digitEffect="slide" duration={1.6} /></span> listings checked
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="flex items-center gap-3">
+          <span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/80">
+            <ShieldAlert className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="eyebrow">Exposure summary</p>
+            <p className="mt-1 text-sm text-white/80">
+              <span className="num inline-flex align-middle text-3xl text-white"><CountUp to={flagged} digitEffect="slide" duration={1.4} /></span> flagged out of{" "}
+              <span className="num inline-flex align-middle text-xl text-white"><CountUp to={checked} digitEffect="slide" duration={1.6} /></span> listings checked
+            </p>
+          </div>
+        </div>
         <p className="text-xs text-white/55">{safe} of your own assets recognised and skipped · scanned in {seconds.toFixed(1)}s</p>
       </div>
       <GlowLine
-        className="mt-4"
+        className="mt-5"
         ruler
         total={flagged}
         segments={flagged > 0 ? parts.map((p) => ({ key: p.key, n: p.n, color: p.color })) : []}
         label={`${critical} critical, ${high} high risk, ${suspicious} suspicious`}
       />
-      <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs text-white/70">
+      <ul className="mt-5 grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/10">
         {parts.map((p) => (
-          <li key={p.key} className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: p.color, boxShadow: `0 0 8px 1px ${p.color}aa` }} />
-            {p.label} <span className="num text-base text-white">{p.n}</span>
-            <span className="num text-xs text-white/45">{flagged ? `${Math.round((p.n / flagged) * 100)}%` : "0%"}</span>
+          <li key={p.key} className="relative bg-background/80 px-4 py-3">
+            <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px]" style={{ background: p.color }} />
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="num text-2xl text-white">{p.n}</span>
+              <span className="num text-xs text-white/50">{flagged ? `${Math.round((p.n / flagged) * 100)}%` : "0%"}</span>
+            </div>
+            <div className="mt-1.5 text-[11px] font-medium uppercase tracking-wider text-white/60">{p.label}</div>
           </li>
         ))}
       </ul>
