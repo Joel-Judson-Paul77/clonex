@@ -5,6 +5,11 @@ Brand impersonation monitoring for app stores and social platforms. Kampus.VC ha
 **Live demo:** https://clonex-app.vercel.app · **Video walkthrough:** https://clonex-app.vercel.app/demo/CloneX-demo.mp4 (takedown runs in demo mode there: notices go only to the owner's test inbox, never to a platform)
 
 **Digital Risk Protection Telegram Bot--->
+**  Telegram Bot Link: https://t.me/drp_scanner_2026_bot
+
+Bot Username: @drp_scanner_2026_bot
+Bot Display Name: Digital Risk Protection Bot
+Web App: https://clonex-app.vercel.app
 
 
 
