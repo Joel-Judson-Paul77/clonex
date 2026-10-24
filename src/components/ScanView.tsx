@@ -8,7 +8,7 @@ import type { BrandProfile, ExcludedItem, Finding, Platform, ScanResult, Severit
 import { profileToBrand } from "@/lib/types";
 import type { TakedownRecord, TakedownResponse } from "@/lib/takedown";
 import TakedownModal from "@/components/scan/TakedownModal";
-import { CaseActions, CaseHistory, StatusChip } from "@/components/scan/CaseControls";
+import { CaseActions, CaseHistory, CaseProgress, StatusChip } from "@/components/scan/CaseControls";
 import { imitatedAsset } from "@/lib/imitates";
 import { addEvent, byPriority, isOpen, pendingAlerts, statusOf, transition, type CaseMap, type CaseRecord, type CaseStatus } from "@/lib/cases";
 
@@ -189,18 +189,21 @@ const TONES = {
   suspicious: { border: "border-amber-500/20", chip: "bg-amber-500/10 text-amber-200", edge: "via-amber-300/70", wash: "from-amber-400/[0.05]", report: false },
 } as const;
 
-function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending, record, onMove, imitates }: {
+function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending, record, onMove, imitates, rank }: {
   f: Finding; tone: keyof typeof TONES; officialLogo?: string; open: boolean; onToggle: () => void; onReport: () => void; pending?: boolean;
-  record?: CaseRecord; onMove: (to: CaseStatus) => void; imitates: string;
+  record?: CaseRecord; onMove: (to: CaseStatus) => void; imitates: string; rank?: number;
 }) {
   const status = record?.status ?? "new";
   const reasons = reasonsOf(f);
   const t = TONES[tone];
   return (
-    <div className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br to-white/[0.02] transition-colors hover:border-white/25 ${t.wash} ${t.border}`}>
+    <div id={`card-${f.id}`} className={`relative scroll-mt-24 overflow-hidden rounded-2xl border bg-gradient-to-br to-white/[0.02] transition-colors hover:border-white/25 ${t.wash} ${t.border}`}>
       <span aria-hidden="true" className={`pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent to-transparent ${t.edge}`} />
       <div className="flex flex-wrap items-start gap-5 p-5">
-        <ScoreRing score={f.score} sev={f.severity} />
+        <div className="flex shrink-0 flex-col items-center gap-1">
+          <ScoreRing score={f.score} sev={f.severity} />
+          {rank !== undefined && <span title="Position in the priority queue, highest risk first" className="text-[10px] font-semibold uppercase tracking-wide text-white/55">#{rank} priority</span>}
+        </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-base font-semibold text-white">{f.name}</span>
@@ -217,7 +220,10 @@ function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending, 
               <span key={r} className={`rounded-full px-3 py-1 text-xs font-medium ${t.chip}`}>{r}</span>
             ))}
           </div>
-          <div className="mt-3"><CaseActions status={status} onMove={onMove} /></div>
+          <div className="mt-3 space-y-2.5">
+            <CaseProgress status={status} />
+            <CaseActions status={status} onMove={onMove} />
+          </div>
         </div>
         <div className="flex shrink-0 flex-col gap-2">
           {t.report && status === "confirmed" && (
@@ -515,6 +521,15 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
     return statusView === "all" ? true : statusView === "open" ? isOpen(s) : s === statusView;
   };
   const queue = byPriority((result?.findings ?? []).filter(inView));
+  const rankOf = new Map(queue.map((f, i) => [f.id, i + 1]));
+  // The next case that still needs a decision: highest score among New and Under review.
+  const nextUp = byPriority((result?.findings ?? []).filter((f) => ["new", "under-review"].includes(statusOf(cases, f.id))))[0];
+  const goToCase = (id: string) => {
+    setStatusView("open");
+    setView("all");
+    setOpen(id);
+    setTimeout(() => document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+  };
   const critical = queue.filter((f) => f.severity === "critical");
   const high = queue.filter((f) => f.severity === "high");
   const suspicious = queue.filter((f) => f.severity === "medium" || f.severity === "low");
@@ -634,6 +649,24 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
             </Panel>
           </div>
 
+          <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/12 bg-white/[0.04] p-4 sm:p-5">
+            <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-lg">{nextUp ? "👉" : "✅"}</span>
+            {nextUp ? (
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-white/55">Start here: next case that needs a decision</p>
+                  <p className="mt-0.5 truncate text-base font-semibold text-white">{nextUp.name} <span className="font-normal text-white/60">· {PLATFORM[nextUp.platform]} · score {nextUp.score} ({nextUp.severity})</span></p>
+                </div>
+                <button type="button" onClick={() => goToCase(nextUp.id)} className="btn-primary px-5 py-2.5 text-sm">Review this case</button>
+              </>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-semibold text-white">Every detection in this scan has a decision.</p>
+                <p className="mt-0.5 text-sm text-white/60">Confirmed cases can go to takedown; dismissed ones stay out of the open queue.</p>
+              </div>
+            )}
+          </div>
+
           <div role="group" aria-label="Case status" className="flex flex-wrap items-center gap-2 pt-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-white/55">Queue</span>
             {(
@@ -683,21 +716,21 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
           <Group show={view === "all" || view === "critical"} dot="bg-red-400" title="Critical Threats" subtitle="Risk score 75 or more: a close look-alike plus evidence such as a copied logo, scam wording or an unofficial phone number." count={critical.length} tone="text-red-300">
             {critical.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No critical threats in this scan.</p>}
             <Limited items={critical} render={(f) => (
-              <ThreatCard key={f.id} f={f} tone="critical" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} imitates={imitatedAsset(f, profile)} />
+              <ThreatCard key={f.id} f={f} tone="critical" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} imitates={imitatedAsset(f, profile)} rank={rankOf.get(f.id)} />
             )} />
           </Group>
 
           <Group show={view === "all" || view === "high"} dot="bg-orange-400" title="High Risk" subtitle="Risk score 55 to 74: likely impersonation. Check the evidence, then report." count={high.length} tone="text-orange-300">
             {high.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No high-risk listings in this scan.</p>}
             <Limited items={high} render={(f) => (
-              <ThreatCard key={f.id} f={f} tone="high" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} imitates={imitatedAsset(f, profile)} />
+              <ThreatCard key={f.id} f={f} tone="high" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} imitates={imitatedAsset(f, profile)} rank={rankOf.get(f.id)} />
             )} />
           </Group>
 
           <Group show={view === "all" || view === "suspicious"} dot="bg-amber-300" title="Suspicious Listings" subtitle="Risk score below 55: look-alike or misspelled names with weaker evidence. Review before acting." count={suspicious.length} tone="text-amber-300">
             {suspicious.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No suspicious listings in this scan.</p>}
             <Limited items={suspicious} render={(f) => (
-              <ThreatCard key={f.id} f={f} tone="suspicious" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} imitates={imitatedAsset(f, profile)} />
+              <ThreatCard key={f.id} f={f} tone="suspicious" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} imitates={imitatedAsset(f, profile)} rank={rankOf.get(f.id)} />
             )} />
           </Group>
 

@@ -60,3 +60,26 @@ export function CaseHistory({ record }: { record?: CaseRecord }) {
     </div>
   );
 }
+
+const TRACK: CaseStatus[] = ["new", "under-review", "confirmed", "closed"];
+
+/** A small New > Under review > Confirmed > Closed track, so the stage of a case reads at a glance. */
+export function CaseProgress({ status }: { status: CaseStatus }) {
+  if (status === "false-positive") {
+    return <p className="text-[11px] font-medium text-white/55">Dismissed as a false positive, out of the open queue. Reopen it if that was a mistake.</p>;
+  }
+  const at = TRACK.indexOf(status);
+  return (
+    <ol aria-label="Case progress" className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11px]">
+      {TRACK.map((s, i) => (
+        <li key={s} aria-current={i === at ? "step" : undefined} className="flex items-center gap-1.5">
+          <span className={`flex items-center gap-1.5 rounded-full px-2 py-0.5 font-medium ${i === at ? "bg-white/15 text-white" : i < at ? "text-white/75" : "text-white/40"}`}>
+            <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${i === at ? "bg-emerald-400" : i < at ? "bg-white/60" : "bg-white/25"}`} />
+            {STATUS_LABEL[s]}
+          </span>
+          {i < TRACK.length - 1 && <span aria-hidden="true" className="text-white/25">›</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
