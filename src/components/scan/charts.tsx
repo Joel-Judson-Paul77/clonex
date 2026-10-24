@@ -15,36 +15,39 @@ type Bucket = keyof typeof SEV_COLOR;
 
 const bucketOf = (f: Finding): Bucket => (f.severity === "critical" ? "critical" : f.severity === "high" ? "high" : "suspicious");
 
-/** Square-pixel stripe: `size` px blocks separated by `gap` px, in one colour. */
-const pixels = (color: string, size = 5, gap = 2) =>
-  `repeating-linear-gradient(90deg, ${color} 0 ${size}px, transparent ${size}px ${size + gap}px)`;
-
 /**
- * Pixel stat line: a row of small square blocks, like an 8-bit progress bar. Each severity fills in its own
- * colour, block by block (stepped, not smooth), over a track of dim blocks. The last block is white.
+ * Exposure meter: solid severity segments on a hatched "monitored area" track, with a fine tick ruler under
+ * the summary. Flat colours, no glow, so the risk level reads precisely, like a security console gauge.
  */
-function GlowLine({ segments, total, label, className = "" }: {
-  segments: { key: string; n: number; color: string }[]; total: number; label: string; className?: string;
+function GlowLine({ segments, total, label, className = "", ruler = false }: {
+  segments: { key: string; n: number; color: string }[]; total: number; label: string; className?: string; ruler?: boolean;
 }) {
   const parts = segments.filter((p) => p.n > 0);
   return (
-    <div className={`relative flex h-3 items-center ${className}`} role="img" aria-label={label}>
-      <div aria-hidden="true" className="absolute inset-x-0 h-[5px]" style={{ backgroundImage: pixels("rgba(255,255,255,0.08)") }} />
-      <div className="relative flex h-[5px] w-full">
+    <div className={className} role="img" aria-label={label}>
+      <div
+        aria-hidden="true"
+        className="flex h-2 overflow-hidden rounded-[3px] border border-white/10"
+        style={{ backgroundImage: "repeating-linear-gradient(135deg, rgba(255,255,255,0.07) 0 2px, transparent 2px 6px)" }}
+      >
         {parts.map((p, i) => (
           <motion.span
             key={p.key}
-            aria-hidden="true"
-            className="relative h-full shrink-0"
-            style={{ backgroundImage: pixels(p.color) }}
+            className="h-full shrink-0"
+            style={{ background: p.color, borderRight: "2px solid transparent", backgroundClip: "padding-box", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.28)" }}
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(100, (p.n / Math.max(1, total)) * 100)}%` }}
-            transition={{ duration: 1, ease: "linear", delay: i * 0.15 }}
-          >
-            {i === parts.length - 1 && <span className="absolute -right-[7px] top-0 h-[5px] w-[5px] bg-white" />}
-          </motion.span>
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 }}
+          />
         ))}
       </div>
+      {ruler && (
+        <div aria-hidden="true" className="mt-1 flex justify-between px-px">
+          {Array.from({ length: 21 }, (_, i) => (
+            <span key={i} className={`w-px bg-white/20 ${i % 5 === 0 ? "h-2" : "h-1"}`} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -103,6 +106,7 @@ export function RiskStrip({ critical, high, suspicious, safe, checked, seconds }
       </div>
       <GlowLine
         className="mt-4"
+        ruler
         total={flagged}
         segments={flagged > 0 ? parts.map((p) => ({ key: p.key, n: p.n, color: p.color })) : []}
         label={`${critical} critical, ${high} high risk, ${suspicious} suspicious`}
