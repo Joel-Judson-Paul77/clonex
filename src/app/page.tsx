@@ -7,6 +7,7 @@ import ScanView from "@/components/ScanView";
 import AutomationView from "@/components/AutomationView";
 import { Check } from "lucide-react";
 import Landing from "@/components/Landing";
+import ThemeSwitch from "@/components/ThemeSwitch";
 import type { BrandProfile } from "@/lib/types";
 
 const KEY = "clonex.profile.v1";
@@ -88,15 +89,15 @@ export default function Home() {
       <a href="#main" className="sr-only rounded-full bg-white px-4 py-2 text-sm font-semibold text-black focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100]">
         Skip to content
       </a>
-      <header className="z-40 -mx-5 lg:sticky lg:top-0 mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-white/[0.06] bg-[#030303]/75 px-5 py-4 backdrop-blur-md">
+      <header className="z-40 -mx-5 lg:sticky lg:top-0 mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-white/[0.06] bg-[var(--header-bg)] px-5 py-4 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-            <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="white" strokeOpacity="0.55" strokeWidth="1.5" />
-            <rect x="10.5" y="10.5" width="19" height="19" rx="6" fill="white" />
+          <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true" className="text-white">
+            <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="currentColor" strokeOpacity="0.55" strokeWidth="1.5" />
+            <rect x="10.5" y="10.5" width="19" height="19" rx="6" fill="currentColor" />
           </svg>
           <h1 className="text-xl font-semibold tracking-tight text-white">CloneX</h1>
         </div>
-        <nav aria-label="Workflow steps" className="grid w-full grid-cols-4 items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm sm:flex sm:w-auto">
+        <nav aria-label="Workflow steps" className="order-last grid w-full sm:order-none grid-cols-4 items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm sm:flex sm:w-auto">
           {STEPS.map((s, i) => {
             const locked = s.id === "monitor" && !profile;
             const active = tab === s.id;
@@ -122,13 +123,16 @@ export default function Home() {
             );
           })}
         </nav>
-        {profile ? (
-          <button type="button" onClick={startOver} className="btn-ghost px-4 py-2 text-xs" title="Clear the saved brand and its last scan">
-            Start over
-          </button>
-        ) : (
-          <p className="eyebrow hidden xl:block">Brand impersonation monitoring</p>
-        )}
+        <div className="flex items-center gap-3">
+          {profile ? (
+            <button type="button" onClick={startOver} className="btn-ghost px-4 py-2 text-xs" title="Clear the saved brand and its last scan">
+              Start over
+            </button>
+          ) : (
+            <p className="eyebrow hidden 2xl:block">Brand impersonation monitoring</p>
+          )}
+          <ThemeSwitch />
+        </div>
       </header>
 
       <main id="main" tabIndex={-1} className="focus:outline-none">

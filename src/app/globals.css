@@ -4,11 +4,67 @@
   --background: #030303;
   --foreground: #ffffff;
   --line: rgba(255, 255, 255, 0.1);
+  /* the "ink" colour every white/xx utility is built from, as r g b so it can be mixed with an alpha */
+  --ink: 255 255 255;
+  --header-bg: rgba(3, 3, 3, 0.75);
+  --bar-bg: rgba(11, 11, 11, 0.85);
+  --glow-strong: rgba(255, 255, 255, 0.1);
+  --glow-soft: rgba(255, 255, 255, 0.045);
+  --glow-faint: rgba(255, 255, 255, 0.03);
+  --scrim: rgba(0, 0, 0, 0.7);
+}
+
+/* Light theme. The UI is written with white-on-black utilities (text-white/55, bg-white/[0.04], bg-black...),
+   so instead of a second set of classes the light theme swaps what "white" and "black" mean, and darkens the
+   pale severity/status shades (100-400) that are only readable on a dark page. 500+ shades already work on
+   both. The inline script in layout.tsx sets data-theme before first paint. */
+html[data-theme="light"] {
+  color-scheme: light;
+  --background: #f6f6f4;
+  --foreground: #0b0b0c;
+  --line: rgba(11, 11, 12, 0.1);
+  --ink: 11 11 12;
+  --header-bg: rgba(246, 246, 244, 0.8);
+  --bar-bg: rgba(255, 255, 255, 0.9);
+  --glow-strong: rgba(255, 255, 255, 0.9);
+  --glow-soft: rgba(255, 255, 255, 0.6);
+  --glow-faint: rgba(255, 255, 255, 0.5);
+  --scrim: rgba(11, 11, 12, 0.4);
+
+  --color-white: #0b0b0c;
+  --color-black: #ffffff;
+
+  --color-red-100: oklch(44.4% 0.177 26.899);
+  --color-red-200: oklch(44.4% 0.177 26.899);
+  --color-red-300: oklch(50.5% 0.213 27.518);
+  --color-red-400: oklch(57.7% 0.245 27.325);
+  --color-red-950: oklch(97.1% 0.013 17.38);
+  --color-orange-100: oklch(47% 0.157 37.304);
+  --color-orange-200: oklch(47% 0.157 37.304);
+  --color-orange-300: oklch(55.3% 0.195 38.402);
+  --color-orange-400: oklch(64.6% 0.222 41.116);
+  --color-amber-100: oklch(47.3% 0.137 46.201);
+  --color-amber-200: oklch(47.3% 0.137 46.201);
+  --color-amber-300: oklch(55.5% 0.163 48.998);
+  --color-amber-400: oklch(55.5% 0.163 48.998);
+  --color-amber-950: oklch(98.7% 0.022 95.277);
+  --color-emerald-100: oklch(43.2% 0.095 166.913);
+  --color-emerald-200: oklch(43.2% 0.095 166.913);
+  --color-emerald-300: oklch(50.8% 0.118 165.612);
+  --color-emerald-400: oklch(59.6% 0.145 163.225);
+  --color-emerald-950: oklch(97.9% 0.021 166.113);
+  --color-sky-200: oklch(44.3% 0.11 240.79);
+  --color-sky-300: oklch(50% 0.134 242.749);
+  --color-sky-400: oklch(58.8% 0.158 241.966);
+  --color-violet-200: oklch(43.2% 0.232 292.759);
+  --color-violet-300: oklch(49.1% 0.27 292.581);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* stays white in both themes: text on solid red / green buttons */
+  --color-always-white: #ffffff;
   --font-sans: "General Sans", ui-sans-serif, system-ui, sans-serif;
   --font-heading: var(--font-syne), "General Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
@@ -18,13 +74,19 @@ html {
   color-scheme: dark;
 }
 
+/* the shader backdrops are white-on-black; in light mode flip them to dark-on-white */
+html[data-theme="light"] .theme-invert {
+  filter: invert(1);
+  opacity: 0.5;
+}
+
 body {
   background-color: var(--background);
   /* soft top glow + faint side glow, echoing the dark, lit-from-above look of the reference */
   background-image:
-    radial-gradient(60% 38% at 50% -8%, rgba(255, 255, 255, 0.1), transparent 70%),
-    radial-gradient(35% 28% at 95% 18%, rgba(255, 255, 255, 0.045), transparent 70%),
-    radial-gradient(35% 28% at 3% 55%, rgba(255, 255, 255, 0.03), transparent 70%);
+    radial-gradient(60% 38% at 50% -8%, var(--glow-strong), transparent 70%),
+    radial-gradient(35% 28% at 95% 18%, var(--glow-soft), transparent 70%),
+    radial-gradient(35% 28% at 3% 55%, var(--glow-faint), transparent 70%);
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
@@ -38,13 +100,13 @@ h3 {
 }
 
 ::selection {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgb(var(--ink) / 0.22);
 }
 
 /* thin, dark scrollbars */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  scrollbar-color: rgb(var(--ink) / 0.18) transparent;
 }
 
 /* ---------- shared look ---------- */
@@ -52,8 +114,13 @@ h3 {
 /* Near-transparent card, hairline border and a soft light edge along the bottom. */
 .glass-card {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012));
+  border: 1px solid rgb(var(--ink) / 0.08);
+  background: linear-gradient(180deg, rgb(var(--ink) / 0.05), rgb(var(--ink) / 0.012));
+}
+html[data-theme="light"] .glass-card {
+  border-color: rgb(var(--ink) / 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6));
+  box-shadow: 0 1px 2px rgb(var(--ink) / 0.04), 0 8px 24px -12px rgb(var(--ink) / 0.12);
 }
 .glass-card::after {
   content: "";
@@ -62,7 +129,7 @@ h3 {
   right: 18%;
   bottom: -1px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgb(var(--ink) / 0.4), transparent);
   pointer-events: none;
 }
 
@@ -73,7 +140,7 @@ h3 {
   font-weight: 400;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+  color: rgb(var(--ink) / 0.55);
 }
 
 /* Each step fades up gently when it opens. No fill mode on purpose: a transform left on this wrapper after
@@ -95,7 +162,7 @@ h3 {
 
 /* Loading placeholder bars. */
 .shimmer {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.04) 100%);
+  background: linear-gradient(90deg, rgb(var(--ink) / 0.04) 0%, rgb(var(--ink) / 0.1) 50%, rgb(var(--ink) / 0.04) 100%);
   background-size: 200% 100%;
   animation: shimmer 1.4s linear infinite;
 }
@@ -127,14 +194,14 @@ h3 {
 
 /* Solid white pill with black text. */
 .btn-primary {
-  background: #ffffff;
-  color: #000000;
+  background: var(--foreground);
+  color: var(--background);
   font-weight: 600;
   border-radius: 9999px;
   transition: background-color 0.2s, transform 0.1s;
 }
 .btn-primary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.86);
+  background: rgb(var(--ink) / 0.86);
 }
 .btn-primary:active:not(:disabled) {
   transform: translateY(1px);
@@ -142,15 +209,15 @@ h3 {
 
 /* Translucent ghost pill. */
 .btn-ghost {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: rgb(var(--ink) / 0.03);
+  border: 1px solid rgb(var(--ink) / 0.1);
+  color: var(--foreground);
   border-radius: 9999px;
   transition: background-color 0.2s, border-color 0.2s;
 }
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgb(var(--ink) / 0.08);
+  border-color: rgb(var(--ink) / 0.2);
 }
 
 /* Step 1 card row. All open: three equal columns. When some cards are collapsed (and at least one is
