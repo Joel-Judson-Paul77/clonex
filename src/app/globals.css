@@ -72,6 +72,8 @@ html[data-theme="light"] {
 
 html {
   color-scheme: dark;
+  /* one step larger than the 16px browser default; every rem-based size (text, spacing) scales with it */
+  font-size: 106.25%;
 }
 
 /* the shader backdrops are white-on-black; in light mode flip them to dark-on-white */
