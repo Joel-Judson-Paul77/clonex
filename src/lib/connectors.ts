@@ -1,6 +1,7 @@
 import type { Brand, Candidate, Platform, SourceStatus } from "./types";
 import { generateVariants, nameSimilarity } from "./lookalike";
 import { scanLookalikeDomains } from "./domains";
+import { apifyEnabled, scanApify } from "./apify";
 
 type Result = { candidates: Candidate[]; status: SourceStatus };
 
@@ -344,12 +345,24 @@ async function timed(fn: (b: Brand) => Promise<Result>, brand: Brand): Promise<R
   return r;
 }
 
+/** Adds optional-source candidates to the built-in results, skipping anything a built-in source already found. */
+export function mergeExtra(base: Result[], extra: Result): Result[] {
+  const known = new Set(base.flatMap((r) => r.candidates.map((c) => c.id)));
+  const fresh = extra.candidates.filter((c) => !known.has(c.id));
+  return [...base, { candidates: fresh, status: { ...extra.status, count: fresh.length } }];
+}
+
 export async function scanAllLive(brand: Brand): Promise<Result[]> {
-  return Promise.all([
-    timed(scanAppStore, brand),
-    timed(scanPlayStore, brand),
-    timed(scanBluesky, brand),
-    timed(scanTelegram, brand),
-    timed(scanDomains, brand),
+  // the optional Apify source runs in parallel with the built-in ones and can never fail the scan
+  const [base, apify] = await Promise.all([
+    Promise.all([
+      timed(scanAppStore, brand),
+      timed(scanPlayStore, brand),
+      timed(scanBluesky, brand),
+      timed(scanTelegram, brand),
+      timed(scanDomains, brand),
+    ]),
+    apifyEnabled() ? scanApify(brand) : Promise.resolve(null),
   ]);
+  return apify ? mergeExtra(base, apify) : base;
 }

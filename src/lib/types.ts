@@ -61,6 +61,7 @@ export interface Candidate {
   ratings?: number;
   createdAt?: string;
   logoSim?: number; // 0..1 similarity of icon/avatar to the official logo
+  via?: string; // set when a candidate came from an optional third-party source, e.g. "Apify: ..."
 }
 
 export interface Signal {
@@ -82,6 +83,7 @@ export interface Finding extends Candidate {
 
 export interface SourceStatus {
   platform: Platform;
+  label?: string; // shown instead of the platform name when one platform has more than one source
   source: "live" | "simulated";
   ok: boolean;
   count: number;
