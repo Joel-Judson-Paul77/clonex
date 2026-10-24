@@ -13,8 +13,6 @@ export const SEV_COLOR = {
 } as const;
 type Bucket = keyof typeof SEV_COLOR;
 
-/** Soft neon glow in the bar's own colour (tight halo plus a wide bloom). */
-const glow = (c: string) => `0 0 10px 0 ${c}cc, 0 0 26px 2px ${c}66`;
 
 /**
  * A thin neon line instead of a fat bar: each segment is a glowing stroke in its own colour that draws in
