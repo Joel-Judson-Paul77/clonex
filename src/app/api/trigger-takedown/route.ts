@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ApiError, errorResponse, rateLimit, readJson, str } from "@/lib/api-guard";
-import { ABUSE_DESKS } from "@/lib/takedown";
+import { ABUSE_DESKS, cleanEmail, describeDispatch } from "@/lib/takedown";
 import type { TakedownConfig, TakedownMode, TakedownPayload, TakedownResponse } from "@/lib/takedown";
 import type { Platform } from "@/lib/types";
 
@@ -43,6 +43,14 @@ export async function POST(req: Request) {
     if (findingSource === "simulated" && m === "live") throw new ApiError(400, "Simulated demo items cannot be reported in live mode");
 
     const desk = ABUSE_DESKS[platform];
+    // Optional copies for the analyst and the brand's own security team. n8n only emails addresses on its approved list.
+    const copies: string[] = [];
+    for (const [field, label] of [["analystEmail", "Your email"], ["companyEmail", "Brand security team email"]] as const) {
+      if (b[field] === undefined || b[field] === "") continue;
+      const email = cleanEmail(b[field]);
+      if (!email) throw new ApiError(400, `${label} is not a valid email address`);
+      if (!copies.includes(email)) copies.push(email);
+    }
     const payload: TakedownPayload = {
       event: "clonex.takedown",
       requestedAt: new Date().toISOString(),
@@ -60,6 +68,7 @@ export async function POST(req: Request) {
       // demo: your own inbox (may be empty: the workflow then falls back to a Gmail draft). live: the platform desk, if it has an email.
       to: m === "demo" ? process.env.CLONEX_DEMO_INBOX || undefined : desk.email,
       intendedDesk: desk,
+      copies,
     };
 
     const url = webhookUrl();
@@ -81,15 +90,9 @@ export async function POST(req: Request) {
         const res: TakedownResponse = { ok: false, status: "failed", mode: m, desk, message: `n8n answered with HTTP ${r.status}. The notice was not confirmed as sent.` };
         return NextResponse.json(res, { status: 502 });
       }
-      // What n8n actually did: "emailed" or "drafted" when Gmail is connected, "logged" for the webhook-only workflow.
-      const answer = (await r.json().catch(() => null)) as { action?: string } | null;
-      const logged = answer?.action === "logged";
-      const res: TakedownResponse = {
-        ok: true, status: "dispatched", mode: m, desk,
-        message: logged
-          ? `Received and logged by n8n (${m} mode: no email was sent and nothing went to the platform).`
-          : m === "demo" ? "Sent through n8n to your test inbox (demo mode: nothing went to the platform)." : "Sent through n8n to the platform's abuse desk.",
-      };
+      // What n8n actually did: "emailed" (with the addresses), or "logged" when no email went out.
+      const answer = (await r.json().catch(() => null)) as { action?: string; sentTo?: string[]; blocked?: string[] } | null;
+      const res: TakedownResponse = { ok: true, status: "dispatched", mode: m, desk, message: describeDispatch(m, answer) };
       return NextResponse.json(res);
     } catch {
       const res: TakedownResponse = { ok: false, status: "failed", mode: m, desk, message: "Could not reach n8n. Check the webhook URL and that the workflow is published." };

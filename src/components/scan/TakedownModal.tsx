@@ -1,9 +1,28 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ABUSE_DESKS } from "@/lib/takedown";
+import { ABUSE_DESKS, cleanEmail } from "@/lib/takedown";
 import type { TakedownConfig, TakedownRequest, TakedownResponse } from "@/lib/takedown";
 import type { Finding } from "@/lib/types";
+
+const ANALYST_EMAIL_KEY = "clonex.analystEmail.v1";
+
+function readStored(key: string): string {
+  try {
+    return localStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeStored(key: string, value: string) {
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {
+    /* storage unavailable: the boxes just start empty next time */
+  }
+}
 
 /**
  * Confirmation dialog for "Initiate Takedown". The notice text is editable. Nothing is sent until the user
@@ -23,6 +42,11 @@ export default function TakedownModal({ f, brand, platformLabel, initialText, on
   const [error, setError] = useState("");
   const [cfg, setCfg] = useState<TakedownConfig | null>(null);
   const [copied, setCopied] = useState(false);
+  // Who gets a copy by email: the analyst (remembered in this browser) and the brand's security team (remembered per brand).
+  const companyKey = `clonex.companyEmail.v1:${brand}`;
+  const [analystEmail, setAnalystEmail] = useState(() => readStored(ANALYST_EMAIL_KEY));
+  const [companyEmail, setCompanyEmail] = useState(() => readStored(companyKey));
+  const badEmail = [analystEmail, companyEmail].some((e) => e.trim() && !cleanEmail(e));
   const desk = ABUSE_DESKS[f.platform];
   const closeRef = useRef<HTMLButtonElement>(null);
 
@@ -42,7 +66,7 @@ export default function TakedownModal({ f, brand, platformLabel, initialText, on
     return () => { live = false; };
   }, []);
 
-  const canSend = authorised && text.trim().length >= 20 && !sending;
+  const canSend = authorised && text.trim().length >= 20 && !sending && !badEmail;
 
   const dispatch = async () => {
     setSending(true);
@@ -59,7 +83,11 @@ export default function TakedownModal({ f, brand, platformLabel, initialText, on
       findingId: f.id,
       noticeText: text,
       authorised: true,
+      analystEmail: analystEmail.trim() || undefined,
+      companyEmail: companyEmail.trim() || undefined,
     };
+    writeStored(ANALYST_EMAIL_KEY, analystEmail.trim());
+    writeStored(companyKey, companyEmail.trim());
     try {
       const r = await fetch("/api/trigger-takedown", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const j = await r.json();
@@ -116,7 +144,7 @@ export default function TakedownModal({ f, brand, platformLabel, initialText, on
           <p className="rounded-[10px] border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs text-violet-200">This is a simulated demo item, not a real account. It can only be dispatched in demo mode.</p>
         )}
         {cfg?.mode === "demo" && (
-          <p className="rounded-[10px] border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">Demo mode: the notice goes to your own test inbox through n8n, not to {desk.desk}.</p>
+          <p className="rounded-[10px] border border-sky-500/40 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">Demo mode: nothing is sent to {desk.desk}. n8n emails the notice only to the addresses below, and only if they are on its approved list.</p>
         )}
         {cfg && !cfg.connected && (
           <p className="rounded-[10px] border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">n8n isn&apos;t connected yet (no webhook URL is set), so dispatching will be a dry run and nothing will be sent.</p>
@@ -135,6 +163,27 @@ export default function TakedownModal({ f, brand, platformLabel, initialText, on
             className="min-h-[12rem] flex-1 resize-y rounded-[10px] border border-white/15 bg-white/[0.04] p-3 font-mono text-xs leading-relaxed text-white/85 focus:border-white/70 focus:outline-none focus:ring-2 focus:ring-white/30"
           />
         </label>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {([
+            ["Your email (analyst copy)", analystEmail, setAnalystEmail, "you@example.com"],
+            [`${brand} security team email`, companyEmail, setCompanyEmail, "security@brand.com"],
+          ] as const).map(([label, value, set, placeholder]) => (
+            <label key={label} className="flex flex-col gap-1.5 text-xs font-medium text-white/75">
+              {label}
+              <input
+                type="email"
+                value={value}
+                onChange={(e) => set(e.target.value)}
+                placeholder={placeholder}
+                maxLength={254}
+                aria-invalid={!!value.trim() && !cleanEmail(value)}
+                className="rounded-[10px] border border-white/15 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/35 focus:border-white/70 focus:outline-none aria-[invalid=true]:border-red-500/60"
+              />
+            </label>
+          ))}
+        </div>
+        {badEmail && <p className="text-xs text-red-300">Check the email addresses: each box takes one plain address.</p>}
 
         <label className="flex items-start gap-2.5 text-xs text-white/75">
           <input type="checkbox" checked={authorised} onChange={(e) => setAuthorised(e.target.checked)} className="mt-0.5 accent-white" />
