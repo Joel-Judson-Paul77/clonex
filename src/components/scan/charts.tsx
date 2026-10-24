@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { Finding, Platform } from "@/lib/types";
+import { CountUp } from "@/components/ui/count-up";
 
 /** Colours shared by the donut, the bars and their legends. */
 export const SEV_COLOR = {
@@ -20,7 +21,9 @@ export function KpiCard({ label, value, sub, tone, tile, Icon, glow = "", classN
       <div aria-hidden="true" className={`pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full opacity-60 blur-2xl transition-opacity group-hover:opacity-100 ${glow}`} />
       <div className="relative min-w-0">
         <div className="text-xs font-medium uppercase tracking-wider text-white/60">{label}</div>
-        <div className={`mt-2 font-heading text-5xl font-semibold leading-none tracking-tight ${tone}`}>{value}</div>
+        <div className={`num mt-2 text-5xl sm:text-6xl ${tone}`}>
+          {typeof value === "number" ? <CountUp to={value} digitEffect="slide" duration={1.4} /> : value}
+        </div>
         {sub && <div className="mt-2.5 text-xs leading-snug text-white/60">{sub}</div>}
       </div>
       <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${tile}`}>
@@ -56,8 +59,8 @@ export function RiskStrip({ critical, high, suspicious, safe, checked, seconds }
     <section className="glass-card rounded-2xl p-5 sm:p-6" aria-label="Scan summary">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
         <p className="text-sm text-white/80">
-          <span className="font-heading text-2xl font-semibold text-white">{flagged}</span> flagged out of{" "}
-          <span className="font-semibold text-white">{checked}</span> listings checked
+          <span className="num text-3xl text-white"><CountUp to={flagged} digitEffect="slide" duration={1.4} /></span> flagged out of{" "}
+          <span className="num text-xl text-white"><CountUp to={checked} digitEffect="slide" duration={1.6} /></span> listings checked
         </p>
         <p className="text-xs text-white/55">{safe} of your own assets recognised and skipped · scanned in {seconds.toFixed(1)}s</p>
       </div>
@@ -73,8 +76,8 @@ export function RiskStrip({ critical, high, suspicious, safe, checked, seconds }
         {parts.map((p) => (
           <li key={p.key} className="flex items-center gap-1.5">
             <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-            {p.label} <span className="font-semibold text-white">{p.n}</span>
-            <span className="text-white/45">{flagged ? `${Math.round((p.n / flagged) * 100)}%` : "0%"}</span>
+            {p.label} <span className="num text-base text-white">{p.n}</span>
+            <span className="num text-xs text-white/45">{flagged ? `${Math.round((p.n / flagged) * 100)}%` : "0%"}</span>
           </li>
         ))}
       </ul>

@@ -135,6 +135,15 @@ html[data-theme="light"] .glass-card {
   pointer-events: none;
 }
 
+/* Numerals: Syne semibold, tight tracking and fixed-width digits (the stat style used on kravos.tech). */
+.num {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Tiny uppercase mono label. */
 .eyebrow {
   font-family: var(--font-mono);

@@ -611,7 +611,7 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
               ["Act", "Review the evidence, then send a takedown notice in one click."],
             ].map(([t, d], i) => (
               <li key={t} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <span className="font-mono text-xs text-white/55">0{i + 1}</span>
+                <span className="num block text-4xl text-white/80">0{i + 1}</span>
                 <p className="mt-1 text-sm font-semibold text-white">{t}</p>
                 <p className="mt-1 text-xs leading-relaxed text-white/60">{d}</p>
               </li>
