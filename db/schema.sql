@@ -21,3 +21,8 @@ create index if not exists case_events_finding_idx on case_events (brand, findin
 -- Only the server (service-role key) talks to this table. With row level security on and no policies,
 -- the public anon key can read and write nothing.
 alter table case_events enable row level security;
+
+-- If "Automatically expose new tables" is off (recommended), the server role needs explicit access.
+grant usage on schema public to service_role;
+grant all on table public.case_events to service_role;
+grant usage, select on all sequences in schema public to service_role;
