@@ -23,7 +23,7 @@ function GlowLine({ segments, total, label, className = "" }: {
 }) {
   const parts = segments.filter((p) => p.n > 0);
   return (
-    <div className={`relative flex h-5 items-center pr-1.5 ${className}`} role="img" aria-label={label}>
+    <div className={`relative flex h-6 items-center pr-1.5 ${className}`} role="img" aria-label={label}>
       <div aria-hidden="true" className="absolute inset-x-0 h-px bg-white/10" />
       <div className="relative flex w-full items-center">
         {parts.map((p, i) => {
@@ -32,12 +32,26 @@ function GlowLine({ segments, total, label, className = "" }: {
             <motion.span
               key={p.key}
               aria-hidden="true"
-              className="relative h-[2px] shrink-0"
-              style={{ background: p.color, boxShadow: `0 0 8px 0 ${p.color}77` }}
+              className="relative flex shrink-0 items-center"
+              style={{ minWidth: 30 }}
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(100, (p.n / Math.max(1, total)) * 100)}%` }}
               transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 }}
             >
+              {/* flat baseline, then one heartbeat (P wave, QRS spike, T wave) at the end of the segment */}
+              <span className="h-[2px] flex-1" style={{ background: p.color, boxShadow: `0 0 8px 0 ${p.color}77` }} />
+              <svg width="30" height="24" viewBox="0 0 30 24" fill="none" className="shrink-0 overflow-visible" style={{ filter: `drop-shadow(0 0 4px ${p.color}99)` }}>
+                <motion.path
+                  d="M0 12 H5 Q7 8 9 12 H12 L14 14 L17 2 L20 22 L22 12 H24 Q26 9 28 12 H30"
+                  stroke={p.color}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 0.9, ease: "easeOut", delay: 0.5 + i * 0.1 }}
+                />
+              </svg>
               {last && (
                 <span
                   className="absolute right-0 top-1/2 h-2 w-2 -translate-y-1/2 translate-x-1/2 rounded-full bg-white"
