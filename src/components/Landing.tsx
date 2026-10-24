@@ -3,6 +3,7 @@
 import { CrowdCanvas } from "@/components/ui/skiper39";
 import { FlowButton } from "@/components/ui/flow-button";
 import ThemeSwitch from "@/components/ThemeSwitch";
+import { NewsArticles } from "@/components/ui/news-articles";
 
 // Black line-art crowd (Open Peeps), white-filled, so it stands out against the dark page.
 const CROWD_SRC = "https://cdn.21st.dev/assets/localized/abdb8990a7bef8c2f5af3e45f0a3c969c4b0603fba8be92e81347de4ea4e1ed7.png";
@@ -53,6 +54,8 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
         <div className="absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-background to-transparent" />
         <CrowdCanvas src={CROWD_SRC} rows={15} cols={7} className="absolute bottom-0 h-full w-full" />
       </div>
+
+      <NewsArticles className="bg-background" />
     </main>
   );
 }
