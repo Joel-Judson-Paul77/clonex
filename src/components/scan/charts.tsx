@@ -33,15 +33,15 @@ function GlowLine({ segments, total, label, className = "" }: {
             key={p.key}
             aria-hidden="true"
             className="relative h-[3px] shrink-0 rounded-full"
-            style={{ background: `linear-gradient(90deg, transparent, ${p.color})`, boxShadow: `0 0 12px 0 ${p.color}66` }}
+            style={{ background: `linear-gradient(90deg, transparent, ${p.color})`, boxShadow: `0 0 6px 0 ${p.color}44` }}
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(100, (p.n / Math.max(1, total)) * 100)}%` }}
             transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 }}
           >
             {/* the orb: white core, tight colour ring, wide soft bloom lighting up the area around it */}
             <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2">
-              <span aria-hidden="true" className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl" style={{ background: `radial-gradient(circle, ${p.color}cc, transparent 70%)` }} />
-              <span className="relative block h-3.5 w-3.5 rounded-full bg-white" style={{ boxShadow: `0 0 0 2px ${p.color}, 0 0 14px 4px ${p.color}, 0 0 36px 10px ${p.color}88` }} />
+              <span aria-hidden="true" className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full blur-lg" style={{ background: `radial-gradient(circle, ${p.color}55, transparent 70%)` }} />
+              <span className="relative block h-3 w-3 rounded-full bg-white" style={{ boxShadow: `0 0 0 2px ${p.color}, 0 0 8px 1px ${p.color}aa` }} />
             </span>
           </motion.span>
         ))}
