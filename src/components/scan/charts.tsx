@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import type { Finding, Platform } from "@/lib/types";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { CountUp } from "@/components/ui/count-up";
 
 /** Colours shared by the donut, the bars and their legends. */
@@ -15,46 +15,35 @@ type Bucket = keyof typeof SEV_COLOR;
 
 const bucketOf = (f: Finding): Bucket => (f.severity === "critical" ? "critical" : f.severity === "high" ? "high" : "suspicious");
 
+/** Square-pixel stripe: `size` px blocks separated by `gap` px, in one colour. */
+const pixels = (color: string, size = 5, gap = 2) =>
+  `repeating-linear-gradient(90deg, ${color} 0 ${size}px, transparent ${size}px ${size + gap}px)`;
+
 /**
- * Stat line: a thin gradient stroke per severity that draws in from the left and ends in a soft node, over a
- * hairline track. One slow shimmer passes along the line after it has drawn.
+ * Pixel stat line: a row of small square blocks, like an 8-bit progress bar. Each severity fills in its own
+ * colour, block by block (stepped, not smooth), over a track of dim blocks. The last block is white.
  */
 function GlowLine({ segments, total, label, className = "" }: {
   segments: { key: string; n: number; color: string }[]; total: number; label: string; className?: string;
 }) {
   const parts = segments.filter((p) => p.n > 0);
-  const still = useReducedMotion();
   return (
-    <div className={`relative flex h-8 items-center pr-3 ${className}`} role="img" aria-label={label}>
-      <div aria-hidden="true" className="absolute inset-x-0 h-px bg-white/10" />
-      <div className="relative flex w-full items-center">
+    <div className={`relative flex h-3 items-center ${className}`} role="img" aria-label={label}>
+      <div aria-hidden="true" className="absolute inset-x-0 h-[5px]" style={{ backgroundImage: pixels("rgba(255,255,255,0.08)") }} />
+      <div className="relative flex h-[5px] w-full">
         {parts.map((p, i) => (
           <motion.span
             key={p.key}
             aria-hidden="true"
-            className="relative h-[3px] shrink-0 rounded-full"
-            style={{ background: `linear-gradient(90deg, transparent, ${p.color})`, boxShadow: `0 0 6px 0 ${p.color}44` }}
+            className="relative h-full shrink-0"
+            style={{ backgroundImage: pixels(p.color) }}
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(100, (p.n / Math.max(1, total)) * 100)}%` }}
-            transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 }}
+            transition={{ duration: 1, ease: "linear", delay: i * 0.15 }}
           >
-            {/* the orb: white core, tight colour ring, wide soft bloom lighting up the area around it */}
-            <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2">
-              <span aria-hidden="true" className="absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full blur-lg" style={{ background: `radial-gradient(circle, ${p.color}55, transparent 70%)` }} />
-              <span className="relative block h-3 w-3 rounded-full bg-white" style={{ boxShadow: `0 0 0 2px ${p.color}, 0 0 8px 1px ${p.color}aa` }} />
-            </span>
+            {i === parts.length - 1 && <span className="absolute -right-[7px] top-0 h-[5px] w-[5px] bg-white" />}
           </motion.span>
         ))}
-        {!still && parts.length > 0 && (
-          <motion.span
-            aria-hidden="true"
-            className="pointer-events-none absolute top-1/2 h-[3px] w-24 -translate-y-1/2 rounded-full"
-            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)" }}
-            initial={{ left: "-20%", opacity: 0 }}
-            animate={{ left: "110%", opacity: [0, 1, 1, 0] }}
-            transition={{ duration: 2.4, ease: "easeInOut", repeat: Infinity, repeatDelay: 3.5, delay: 1.6 }}
-          />
-        )}
       </div>
     </div>
   );
