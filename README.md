@@ -6,6 +6,25 @@ Brand impersonation monitoring for app stores and social platforms. Kampus.VC ha
 
 You describe your real brand once. CloneX searches for look-alike apps and accounts, explains each detection in plain language with a 0 to 100 score, never flags your own official assets, and lets an analyst send a reviewed takedown notice through an n8n workflow.
 
+## Round 2: from a list of suspects to an investigation queue
+
+HacXLerate Round 2 asks for a scoring and investigation layer analysts can trust. What was added on top of the Round 1 detector:
+
+| Round 2 requirement | How CloneX does it |
+|---|---|
+| Record per detection: source, suspected asset, evidence, score, status | Each card shows the platform and handle, **which official asset it imitates** (taken from the brand profile, or "none listed" when the profile has none), the reasons, the 0 to 100 score and a status |
+| Evidence-based, graded, explained score | The evidence drawer lists every signal with its points (name, logo, scam wording, phone, age) and a plain-language reason for each |
+| Official assets never flagged | They are removed before scoring and listed under "Excluded assets" |
+| Review, confirm or dismiss | Statuses: New, Under review, Confirmed, False positive, Closed. Only sensible moves are allowed, and the server re-checks each one |
+| Highest risk first | The default **Open queue** is sorted by score. False positives and closed cases drop out and can be shown with the status filters |
+| History of changes and who made them | Every decision is an append-only row with the analyst's name and a timestamp, shown in the evidence drawer |
+| Bonus: takedown report draft | Available only for a **Confirmed** case: an editable, evidence-only notice with an authorisation tick-box, Copy and Download |
+| Bonus: high-risk alerts, not repeated | One in-app banner per new critical or high detection; a re-scan stays quiet for detections already alerted |
+
+**Case history is shared.** When the Supabase variables are set (see Settings), decisions go to one Postgres table, `case_events` (`db/schema.sql`), through `/api/cases`, so every analyst sees the same queue and history, refreshed every 15 seconds. Without them the app still works and keeps the history in the analyst's browser.
+
+**Look-alike domains** are found two ways: the certificate-transparency logs (often down) and a direct DNS check of about 250 typo, scam-word and other-ending variants of the brand's domain. A registered look-alike is evidence, not proof: the domain may belong to an unrelated owner, so the analyst decides.
+
 ## Run it
 
 ```bash
@@ -29,7 +48,7 @@ Everything works with no configuration. Optional settings go in `.env.local` (se
 | Google Play (unofficial scraper) | Live |
 | Bluesky (public API) | Live |
 | Telegram (public preview pages, with fallback hosts for networks that block `t.me`) | Live |
-| Look-alike domains (certificate-transparency logs) | Live, often slow or down |
+| Look-alike domains (public DNS check of generated variants, plus certificate-transparency logs) | Live. The certificate logs are often slow or down; the DNS check does not depend on them |
 | Instagram, X | **Simulated demo feed, always labelled.** These platforms block automated access. |
 
 Every result carries a LIVE, SIMULATED or CACHED badge. If a source fails, the scan continues, the last good result for that source is shown as CACHED, and the dashboard says which source was unavailable.
@@ -55,7 +74,7 @@ flowchart LR
   C[("Server cache<br/>last good result per source")] -.fallback.-> S
 ```
 
-**Storage:** the brand profile and last scan stay in the browser. The server keeps only a small cache of the last good result per source, so a failing source falls back to a result labelled CACHED. Nothing about users is stored.
+**Storage:** the brand profile and last scan stay in the browser. The server keeps a small cache of the last good result per source, so a failing source falls back to a result labelled CACHED. Analyst decisions and their history are stored in Postgres (Supabase) when it is configured, otherwise in the browser. No personal data is collected: a case row holds only the brand, the detection id, the status, the analyst's chosen name and a timestamp.
 
 **Official assets are removed before scoring**, by handle, app ID or package, publisher name and domain, so a brand's own accounts and apps can never be flagged.
 
@@ -69,7 +88,7 @@ flowchart LR
 
 ## Takedown through n8n
 
-"Initiate Takedown" on a critical or high finding opens a dialog with an editable notice, the target abuse desk and an authorisation checkbox. Dispatch posts to `/api/trigger-takedown`, which forwards to the n8n workflow in `n8n/clonex-takedown.workflow.json` (webhook, email or Gmail draft, team alert).
+"Initiate Takedown" appears on a **confirmed** critical or high finding and opens a dialog with an editable notice, the target abuse desk and an authorisation checkbox. Dispatch posts to `/api/trigger-takedown`, which forwards to an n8n workflow. Two versions are in the repo: `n8n/clonex-takedown.workflow.json` (webhook, email or Gmail draft, team alert; needs Gmail and Telegram connected in n8n) and `n8n/clonex-takedown-lite.workflow.json` (webhook only: n8n receives and **logs** the request and sends no email). The deployed demo uses the lite workflow, and the interface reports what n8n actually did, for example "Received and logged by n8n (demo mode: no email was sent and nothing went to the platform)".
 
 - The server chooses the recipient, never the browser.
 - **Demo mode is the default**: every notice goes to `CLONEX_DEMO_INBOX`, never to a platform. Live mode needs `CLONEX_TAKEDOWN_MODE=live` and refuses simulated items.
@@ -85,11 +104,13 @@ flowchart LR
 | `CLONEX_TAKEDOWN_MODE` | `demo` (default) or `live` |
 | `CLONEX_DEMO_INBOX` | Your own inbox for demo-mode notices |
 | `CLONEX_NOTIFY_KEY` | Enables `/api/notify` (scan alerts); callers send it as `x-clonex-key` |
+| `SUPABASE_URL` | Project URL of the Supabase database that holds the shared case history |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-side secret key for that project. Never expose it to the browser or commit it. Run `db/schema.sql` once in the Supabase SQL editor first |
 
 ## Tests
 
 ```bash
-npm test            # 74 unit tests: look-alike matching, scoring, official-asset exclusion, API guards
+npm test            # 131 unit tests: look-alike matching, scoring, official-asset exclusion, API guards, case status rules, domain variants, case history
 npm run test:coverage
 ```
 
@@ -99,12 +120,16 @@ The accuracy tests also guard the numbers quoted above, so a detection change th
 
 - Instagram and X are simulated; production would need licensed data.
 - Google Play uses an unofficial scraper and can be rate-limited.
-- The certificate-log source is often unavailable.
+- The certificate-log source is often unavailable. The DNS check of generated look-alike domains covers for it, but it only finds domains that are registered and live, and a registered typo domain may belong to an unrelated owner.
 - Brands that are everyday words (for example Wise or Slice) still collect some unrelated apps and accounts that happen to use the word.
 - Names that mix a typo with an added word are missed.
 - We scanned all 96 built-in brands against the live sources: no crashes. That run is how we found and fixed over-flagging on short brand names such as CRED.
 - A logo cropped by about 15% can slip below the logo-match threshold.
-- Nothing is stored server-side besides a small cache of the last good result per source. The brand profile and last scan live in the browser.
+- The brand profile and last scan live in the browser. Case decisions are stored in Postgres when Supabase is configured, otherwise in the browser.
+- **There is no login.** Anyone with the link can record a decision. The analyst name is a label the user types, not a verified identity. The API validates input and is rate limited, but real use would need authentication.
+- The deployed demo's n8n workflow only logs takedown requests; it does not email anyone. Takedown mode is `demo`, so nothing ever reaches a platform.
+- The "already alerted" memory for high-risk alerts is kept per browser, so a new browser may show the alert banner again once.
+- The "Imitates" line names an official asset only if the brand profile lists one of that type; the simulated Instagram and X items show "none listed in the profile".
 
 ## Stack
 
