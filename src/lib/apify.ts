@@ -1,106 +1,101 @@
 import type { Brand, Candidate, SourceStatus } from "./types";
 
-// Optional extra data source: app-store keyword search (Apple App Store + Google Play in one run) through the
-// Apify actor cheapapi/app-store-google-play-scraper, "search" mode. It only ever ADDS candidates: the built-in
-// sources stay the fallback, and a failure here is reported in the source list and never stops the scan.
-// Candidates go through the normal pipeline afterwards (official-asset check, then the one scorer).
+// Optional extra data source: a Google web search for scam-style phrases about the brand ("<brand> KYC update
+// apk", "<brand> customer care number"), run through the Apify actor apify/google-search-scraper. It finds
+// look-alike and spam pages that no app store or DNS check can see, including scam pages planted on hacked
+// third-party sites. It only ever ADDS candidates: the built-in sources stay the fallback, and a failure here
+// is reported in the source list and never stops the scan. Candidates go through the normal pipeline afterwards
+// (official-asset check, then the one scorer).
 //
 // Off unless APIFY_ENABLED=true AND APIFY_TOKEN is set. The token is only ever sent in an Authorization header
 // and is never logged or returned to the browser.
 
-export const APIFY_ACTOR = "cheapapi~app-store-google-play-scraper";
-export const APIFY_LABEL = "Apify: App Store + Google Play search";
+export const APIFY_ACTOR = "apify~google-search-scraper";
+export const APIFY_LABEL = "Apify: Google web search";
 
-/** Hard limits per run. Search results cost about $0.00015 each, so these keep one run well under a cent. */
-const MAX_KEYWORDS = 2;
-const MAX_RESULTS_PER_KEYWORD = 30; // the actor's minimum for search
-export const MAX_ITEMS = 50; // never read more than this many results back
-const MAX_SPEND_USD = "0.05"; // Apify stops the run when this is reached
-const ACTOR_TIMEOUT_S = 15; // Apify aborts the run after this long
-const CLIENT_DEADLINE_MS = 18_000; // and so do we (the scan route has a 60 s budget)
+/** Limits per run. Each search page costs about $0.0018, so two queries of one page each cost under half a cent. */
+const MAX_QUERIES = 2;
+export const MAX_RESULTS = 20; // never read more than this many web results back
+// Apify rejects a per-run ceiling below $0.50 for this actor. The real spend is bounded by the two one-page
+// queries above (about $0.004); the ceiling is only a backstop.
+const MAX_SPEND_USD = "0.5";
+const ACTOR_TIMEOUT_S = 40; // Apify aborts the run after this long (a run normally takes about 25 s)
+const CLIENT_DEADLINE_MS = 45_000; // and so do we (the scan route has a 60 s budget)
 
 type Result = { candidates: Candidate[]; status: SourceStatus };
 
-/** One search result as the actor returns it. Every field is optional because the shape is not under our control. */
-export interface ApifySearchItem {
-  type?: string;
-  keyword?: string;
-  rank?: number;
-  appId?: string | number;
-  id?: string | number;
-  title?: string;
-  url?: string;
-  iconUrl?: string;
-  developer?: string;
-  developerUrl?: string;
-  rating?: number;
-  ratingsCount?: number;
-  store?: string;
-  storeName?: string;
+/** One Google results page as the actor returns it. Every field is optional because the shape is not ours. */
+export interface ApifyPage {
+  searchQuery?: { term?: string };
+  organicResults?: { title?: string; url?: string; description?: string; position?: number; type?: string }[];
 }
+
+// Pages that other sources already cover, or that are only social media: never worth a candidate of their own.
+const SKIP_HOSTS = ["google.com", "youtube.com", "youtu.be", "wikipedia.org", "facebook.com", "instagram.com", "x.com", "twitter.com", "linkedin.com", "reddit.com"];
 
 export function apifyEnabled(env: Record<string, string | undefined> = process.env): boolean {
   return env.APIFY_ENABLED === "true" && !!env.APIFY_TOKEN;
 }
 
-const str = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v.trim() : undefined);
-
-/** Which store a result belongs to, from its link first, then from the store field. */
-function storeOf(item: ApifySearchItem): "app-store" | "play-store" | null {
-  const url = str(item.url) ?? "";
-  if (/^https?:\/\/(apps|itunes)\.apple\.com\//i.test(url)) return "app-store";
-  if (/^https?:\/\/play\.google\.com\//i.test(url)) return "play-store";
-  const s = `${item.store ?? ""} ${item.storeName ?? ""}`.toLowerCase();
-  if (/apple|app\s*store|ios/.test(s)) return "app-store";
-  if (/google|play/.test(s)) return "play-store";
-  return null;
-}
-
-/** Turn actor output into our own Candidate shape. Rows that are not apps, or are unusable, are skipped. */
-export function normalizeApifyItems(items: unknown): Candidate[] {
-  if (!Array.isArray(items)) return [];
-  const out: Candidate[] = [];
-  const seen = new Set<string>();
-  for (const raw of items.slice(0, MAX_ITEMS)) {
-    if (!raw || typeof raw !== "object") continue;
-    const item = raw as ApifySearchItem;
-    const title = str(item.title);
-    const store = storeOf(item);
-    if (!title || !store) continue;
-    const rawId = String(item.appId ?? item.id ?? "").trim();
-    // same id formats as the built-in sources, so the official-app check and de-duplication work across them
-    const storeId = store === "app-store" ? (rawId.match(/^(?:id)?(\d+)$/i)?.[1] ?? str(item.url)?.match(/\/id(\d+)/)?.[1]) : rawId;
-    if (!storeId) continue;
-    const id = store === "app-store" ? `ios-${storeId}` : `play-${storeId}`;
-    if (seen.has(id)) continue;
-    seen.add(id);
-    out.push({
-      id,
-      platform: store,
-      source: "live",
-      kind: "app",
-      name: title,
-      handle: storeId,
-      developer: str(item.developer),
-      url: str(item.url),
-      iconUrl: str(item.iconUrl),
-      ratings: typeof item.ratingsCount === "number" ? item.ratingsCount : undefined,
-      via: APIFY_LABEL,
-    });
+function hostOf(url: unknown): string | null {
+  if (typeof url !== "string") return null;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return u.hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
   }
-  return out;
 }
 
-/** Search words: the brand itself and one scam-style phrase. Few on purpose: each keyword is paid for. */
-export function apifyKeywords(brand: Brand): string[] {
-  return [brand.name, `${brand.name} official`].slice(0, MAX_KEYWORDS);
+const skipped = (host: string) => SKIP_HOSTS.some((s) => host === s || host.endsWith(`.${s}`));
+
+/**
+ * Turn Google result pages into Candidates, one per web page. The page title is the name (what a victim reads,
+ * and what the scorer compares with the brand), the site's address is the handle, and the snippet is the
+ * description so the scorer can read the scam wording and phone numbers.
+ */
+export function normalizeApifyPages(pages: unknown): Candidate[] {
+  if (!Array.isArray(pages)) return [];
+  const out = new Map<string, Candidate>();
+  for (const raw of pages) {
+    const results = (raw as ApifyPage | null)?.organicResults;
+    if (!Array.isArray(results)) continue;
+    for (const r of results) {
+      if (out.size >= MAX_RESULTS) break;
+      const host = hostOf(r?.url);
+      if (!host || skipped(host)) continue;
+      const u = new URL(r.url as string);
+      const id = `web-${host}${u.pathname}`.replace(/\/+$/, "").slice(0, 160);
+      if (out.has(id)) continue;
+      const title = typeof r.title === "string" && r.title.trim() ? r.title.trim() : host;
+      const snippet = typeof r.description === "string" ? r.description.replace(/\s*\.{3}\s*Read more$/i, "").replace(/\s+/g, " ").trim() : "";
+      out.set(id, {
+        id,
+        platform: "domain",
+        source: "live",
+        kind: "page",
+        name: title,
+        handle: host,
+        url: r.url,
+        description: snippet.slice(0, 600),
+        via: APIFY_LABEL,
+      });
+    }
+  }
+  return [...out.values()];
+}
+
+/** Scam-style searches: the phrases fraudsters write pages and apps around. Two only, because each is paid for. */
+export function apifyQueries(brand: Brand): string[] {
+  return [`${brand.name} KYC update apk`, `${brand.name} customer care number`].slice(0, MAX_QUERIES);
 }
 
 /** Runs the actor once and returns its dataset items. Throws a short, secret-free message on any failure. */
 async function runActor(brand: Brand, token: string, fetchImpl: typeof fetch): Promise<unknown> {
   const qs = new URLSearchParams({
     timeout: String(ACTOR_TIMEOUT_S),
-    maxItems: String(MAX_ITEMS),
+    maxItems: String(MAX_QUERIES),
     maxTotalChargeUsd: MAX_SPEND_USD,
     format: "json",
     clean: "true",
@@ -113,12 +108,11 @@ async function runActor(brand: Brand, token: string, fetchImpl: typeof fetch): P
       signal: ctl.signal,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
-        mode: "search",
-        keywords: apifyKeywords(brand),
-        maxResults: MAX_RESULTS_PER_KEYWORD,
-        store: "both",
-        country: "IN",
-        language: "en",
+        queries: apifyQueries(brand).join("\n"),
+        maxPagesPerQuery: 1,
+        resultsPerPage: 10,
+        countryCode: "in",
+        languageCode: "en",
       }),
     });
     if (!r.ok) throw new Error(`Apify answered HTTP ${r.status}`);
@@ -139,7 +133,7 @@ export async function scanApify(
   const t0 = Date.now();
   const env = opts.env ?? process.env;
   const status = (ok: boolean, count: number, note?: string): SourceStatus => ({
-    platform: "app-store",
+    platform: "domain",
     label: APIFY_LABEL,
     source: "live",
     ok,
@@ -148,8 +142,8 @@ export async function scanApify(
     ms: Date.now() - t0,
   });
   try {
-    const items = await runActor(brand, env.APIFY_TOKEN ?? "", opts.fetchImpl ?? fetch);
-    const candidates = normalizeApifyItems(items);
+    const pages = await runActor(brand, env.APIFY_TOKEN ?? "", opts.fetchImpl ?? fetch);
+    const candidates = normalizeApifyPages(pages);
     if (!candidates.length) throw new Error("Apify returned no usable results");
     return { candidates, status: status(true, candidates.length) };
   } catch (e) {

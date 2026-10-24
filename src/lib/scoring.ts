@@ -19,7 +19,7 @@ export function officialReason(c: Candidate, brand: Brand): string | null {
   const dev = (c.developer ?? "").toLowerCase();
   if (h && brand.officialHandles.some((o) => o.toLowerCase() === h)) return "Matches an official handle in your profile";
   if (c.kind === "app" && brand.officialApps.some((a) => a.toLowerCase() === h || c.id === `ios-${a}`)) return "Matches an official app ID in your profile";
-  if (c.kind === "domain" && brand.officialDomains.some((d) => h === d.toLowerCase() || h.endsWith("." + d.toLowerCase()))) return "On an official domain";
+  if ((c.kind === "domain" || c.kind === "page") && brand.officialDomains.some((d) => h === d.toLowerCase() || h.endsWith("." + d.toLowerCase()))) return "On an official domain";
   const pub = c.kind === "app" && dev ? brand.officialDevelopers.find((d) => d.length >= 4 && dev.includes(d.toLowerCase())) : undefined;
   if (pub) return `Published by official publisher "${pub}"`;
   return null;
