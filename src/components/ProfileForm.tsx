@@ -1,5 +1,6 @@
 "use client";
 
+import { NeuroBackdrop } from "@/components/ui/neuro-backdrop";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Zap } from "lucide-react";
 import BrandBubbles from "@/components/BrandBubbles";
@@ -231,6 +232,7 @@ export default function ProfileForm({ initial, onSave }: { initial: BrandProfile
     <div className="space-y-6">
       {/* Step banner */}
       <div className="glass-card rounded-3xl p-6 sm:p-8">
+        <NeuroBackdrop />
         <div className="relative">
         <p className="eyebrow">Step 1 of 3</p>
         <h2 className="mt-2 text-2xl font-semibold leading-[1.15] sm:text-3xl bg-gradient-to-b from-white to-white/55 bg-clip-text text-transparent">Define your official brand assets so CloneX never flags your real accounts.</h2>
