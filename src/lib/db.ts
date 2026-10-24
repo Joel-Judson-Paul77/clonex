@@ -38,7 +38,14 @@ async function rest(path: string, init?: RequestInit): Promise<Response> {
       ...init,
       signal: ctl.signal,
       cache: "no-store",
-      headers: { apikey: key()!, Authorization: `Bearer ${key()}`, "Content-Type": "application/json", ...init?.headers },
+      headers: {
+        apikey: key()!,
+        // Legacy service-role keys are JWTs and also go in Authorization; the newer "sb_secret_..." keys are not
+        // JWTs and must be sent in the apikey header only.
+        ...(key()!.startsWith("sb_") ? {} : { Authorization: `Bearer ${key()}` }),
+        "Content-Type": "application/json",
+        ...init?.headers,
+      },
     });
   } finally {
     clearTimeout(timer);
