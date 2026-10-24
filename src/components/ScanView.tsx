@@ -9,6 +9,7 @@ import { profileToBrand } from "@/lib/types";
 import type { TakedownRecord, TakedownResponse } from "@/lib/takedown";
 import TakedownModal from "@/components/scan/TakedownModal";
 import { CaseActions, CaseHistory, StatusChip } from "@/components/scan/CaseControls";
+import { imitatedAsset } from "@/lib/imitates";
 import { addEvent, byPriority, isOpen, pendingAlerts, statusOf, transition, type CaseMap, type CaseRecord, type CaseStatus } from "@/lib/cases";
 
 const PLATFORM: Record<Platform, string> = {
@@ -82,7 +83,7 @@ function reasonsOf(f: Finding, max = 4): string[] {
   return out;
 }
 
-function takedownReport(f: Finding, brand: string): string {
+function takedownReport(f: Finding, brand: string, imitates: string): string {
   const date = new Date().toISOString().slice(0, 10);
   return [
     `Subject: Impersonation report: "${f.name}" impersonating ${brand}`,
@@ -94,6 +95,7 @@ function takedownReport(f: Finding, brand: string): string {
     `Platform: ${PLATFORM[f.platform]}`,
     `Account / app: ${f.name}${f.handle ? ` (${f.handle})` : ""}`,
     f.url ? `Link: ${f.url}` : "",
+    `It appears to imitate: ${imitates}`,
     `Risk score: ${f.score}/100 (${f.severity})`,
     "",
     "Why we believe this is impersonation:",
@@ -187,9 +189,9 @@ const TONES = {
   suspicious: { border: "border-amber-500/20", chip: "bg-amber-500/10 text-amber-200", edge: "via-amber-300/70", wash: "from-amber-400/[0.05]", report: false },
 } as const;
 
-function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending, record, onMove }: {
+function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending, record, onMove, imitates }: {
   f: Finding; tone: keyof typeof TONES; officialLogo?: string; open: boolean; onToggle: () => void; onReport: () => void; pending?: boolean;
-  record?: CaseRecord; onMove: (to: CaseStatus) => void;
+  record?: CaseRecord; onMove: (to: CaseStatus) => void; imitates: string;
 }) {
   const status = record?.status ?? "new";
   const reasons = reasonsOf(f);
@@ -209,6 +211,7 @@ function ThreatCard({ f, tone, officialLogo, open, onToggle, onReport, pending, 
           <div className="mt-0.5 text-xs text-white/55">
             {PLATFORM[f.platform]} · <span className="font-mono">{f.handle}</span>
           </div>
+          <div className="mt-1 text-xs text-white/70"><span className="font-semibold text-white/85">Imitates:</span> {imitates}</div>
           <div className="mt-3 flex flex-wrap gap-2">
             {reasons.map((r) => (
               <span key={r} className={`rounded-full px-3 py-1 text-xs font-medium ${t.chip}`}>{r}</span>
@@ -680,21 +683,21 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
           <Group show={view === "all" || view === "critical"} dot="bg-red-400" title="Critical Threats" subtitle="Risk score 75 or more: a close look-alike plus evidence such as a copied logo, scam wording or an unofficial phone number." count={critical.length} tone="text-red-300">
             {critical.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No critical threats in this scan.</p>}
             <Limited items={critical} render={(f) => (
-              <ThreatCard key={f.id} f={f} tone="critical" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} />
+              <ThreatCard key={f.id} f={f} tone="critical" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} imitates={imitatedAsset(f, profile)} />
             )} />
           </Group>
 
           <Group show={view === "all" || view === "high"} dot="bg-orange-400" title="High Risk" subtitle="Risk score 55 to 74: likely impersonation. Check the evidence, then report." count={high.length} tone="text-orange-300">
             {high.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No high-risk listings in this scan.</p>}
             <Limited items={high} render={(f) => (
-              <ThreatCard key={f.id} f={f} tone="high" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} />
+              <ThreatCard key={f.id} f={f} tone="high" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} imitates={imitatedAsset(f, profile)} />
             )} />
           </Group>
 
           <Group show={view === "all" || view === "suspicious"} dot="bg-amber-300" title="Suspicious Listings" subtitle="Risk score below 55: look-alike or misspelled names with weaker evidence. Review before acting." count={suspicious.length} tone="text-amber-300">
             {suspicious.length === 0 && <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-white/55">No suspicious listings in this scan.</p>}
             <Limited items={suspicious} render={(f) => (
-              <ThreatCard key={f.id} f={f} tone="suspicious" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} />
+              <ThreatCard key={f.id} f={f} tone="suspicious" officialLogo={profile.logoDataUrl} open={open === f.id} onToggle={() => setOpen(open === f.id ? null : f.id)} onReport={() => setReport(f)} pending={!!takedowns[f.id]} record={cases[f.id]} onMove={(to) => move(f.id, to)} imitates={imitatedAsset(f, profile)} />
             )} />
           </Group>
 
@@ -709,7 +712,7 @@ export default function ScanView({ profile }: { profile: BrandProfile }) {
           f={report}
           brand={profile.name}
           platformLabel={PLATFORM[report.platform]}
-          initialText={takedownReport(report, profile.name)}
+          initialText={takedownReport(report, profile.name, imitatedAsset(report, profile))}
           onClose={() => setReport(null)}
           onDone={(res) => onTakedownDone(report, res)}
         />
