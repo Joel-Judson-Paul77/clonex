@@ -25,7 +25,7 @@ function GlowLine({ segments, total, label, className = "" }: {
   const parts = segments.filter((p) => p.n > 0);
   const still = useReducedMotion();
   return (
-    <div className={`relative flex h-5 items-center overflow-hidden pr-2 ${className}`} role="img" aria-label={label}>
+    <div className={`relative flex h-8 items-center pr-3 ${className}`} role="img" aria-label={label}>
       <div aria-hidden="true" className="absolute inset-x-0 h-px bg-white/10" />
       <div className="relative flex w-full items-center">
         {parts.map((p, i) => (
@@ -33,15 +33,16 @@ function GlowLine({ segments, total, label, className = "" }: {
             key={p.key}
             aria-hidden="true"
             className="relative h-[3px] shrink-0 rounded-full"
-            style={{ background: `linear-gradient(90deg, ${p.color}40, ${p.color})`, boxShadow: `0 0 12px 0 ${p.color}66` }}
+            style={{ background: `linear-gradient(90deg, transparent, ${p.color})`, boxShadow: `0 0 12px 0 ${p.color}66` }}
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(100, (p.n / Math.max(1, total)) * 100)}%` }}
             transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 }}
           >
-            <span
-              className="absolute right-0 top-1/2 h-2.5 w-2.5 -translate-y-1/2 translate-x-1/2 rounded-full"
-              style={{ background: p.color, boxShadow: `0 0 0 3px #0b0b0b, 0 0 14px 3px ${p.color}99` }}
-            />
+            {/* the orb: white core, tight colour ring, wide soft bloom lighting up the area around it */}
+            <span className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2">
+              <span aria-hidden="true" className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl" style={{ background: `radial-gradient(circle, ${p.color}cc, transparent 70%)` }} />
+              <span className="relative block h-3.5 w-3.5 rounded-full bg-white" style={{ boxShadow: `0 0 0 2px ${p.color}, 0 0 14px 4px ${p.color}, 0 0 36px 10px ${p.color}88` }} />
+            </span>
           </motion.span>
         ))}
         {!still && parts.length > 0 && (
