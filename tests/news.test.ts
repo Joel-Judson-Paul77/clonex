@@ -8,6 +8,7 @@ describe("news articles", () => {
       expect(a.url, a.headline).toMatch(/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}\//i);
       for (const field of [a.headline, a.publisher, a.date, a.summary, a.takeaway]) expect(field.trim().length).toBeGreaterThan(3);
       expect(a.topic in TOPIC_LABEL).toBe(true);
+      expect(a.image, a.headline).toMatch(/^https:\/\/[a-z0-9.-]+\.[a-z]{2,}\/.+\.(jpe?g|png|webp)$/i);
     }
   });
 

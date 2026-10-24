@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { ArrowUpRight, Landmark, MessageSquareWarning, ShieldAlert, Smartphone, TrendingUp, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NEWS, TOPIC_LABEL, type NewsArticle, type NewsTopic } from "@/lib/news";
@@ -14,6 +17,28 @@ const TOPIC_ICON: Record<NewsTopic, LucideIcon> = {
 
 const HATCH = "bg-[repeating-linear-gradient(45deg,rgb(var(--ink)/0.1)_0px_1px,transparent_1px_8px)]";
 
+/** The publisher's own preview image, linking to the article. If the image cannot load, the panel still works without it. */
+function SourceImage({ a }: { a: NewsArticle }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return null;
+  return (
+    <div className="relative z-10 mt-5">
+      <a href={a.url} target="_blank" rel="noreferrer noopener" aria-label={`Open the article at ${a.publisher}`} className="block overflow-hidden rounded-2xl border border-white/15">
+        {/* eslint-disable-next-line @next/next/no-img-element -- the publisher's own preview image, loaded from their site */}
+        <img
+          src={a.image}
+          alt={`Preview image from the ${a.publisher} article`}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          onError={() => setFailed(true)}
+          className="aspect-[16/10] w-full object-cover transition-transform duration-300 hover:scale-[1.03]"
+        />
+      </a>
+      <p className="mt-1.5 font-mono text-[10px] tracking-tight text-white/50">Image: {a.publisher}. Click to read the article.</p>
+    </div>
+  );
+}
+
 function ArticleRow({ a, index }: { a: NewsArticle; index: number }) {
   const Icon = TOPIC_ICON[a.topic];
   return (
@@ -24,7 +49,8 @@ function ArticleRow({ a, index }: { a: NewsArticle; index: number }) {
           <Icon aria-hidden="true" className="size-4" />
           {TOPIC_LABEL[a.topic]}
         </div>
-        <div className="relative z-10 mt-8 rounded-2xl border border-white/15 bg-black/40 px-5 py-4 backdrop-blur">
+        <SourceImage a={a} />
+        <div className="relative z-10 mt-5 rounded-2xl border border-white/15 bg-black/40 px-5 py-4 backdrop-blur">
           <p className="text-lg font-semibold text-white">{a.publisher}</p>
           <p className="mt-0.5 font-mono text-xs tracking-tight text-white/60">{a.date}</p>
         </div>
