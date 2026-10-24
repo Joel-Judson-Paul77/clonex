@@ -2,7 +2,8 @@
 
 import type { LucideIcon } from "lucide-react";
 import type { Finding, Platform } from "@/lib/types";
-import { motion } from "motion/react";
+import { useId } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { CountUp } from "@/components/ui/count-up";
 
 /** Colours shared by the donut, the bars and their legends. */
@@ -13,60 +14,75 @@ export const SEV_COLOR = {
 } as const;
 type Bucket = keyof typeof SEV_COLOR;
 
+const bucketOf = (f: Finding): Bucket => (f.severity === "critical" ? "critical" : f.severity === "high" ? "high" : "suspicious");
+
+/** Each severity has its own pulse: critical beats fast and tall, suspicious slow and shallow. */
+const RHYTHM: Record<string, { tile: number; amp: number }> = {
+  critical: { tile: 34, amp: 11 },
+  high: { tile: 50, amp: 8 },
+  suspicious: { tile: 76, amp: 5 },
+};
+
+/** One beat sitting at the right end of a tile of width `tile`: a small P wave, the QRS spike, a T wave. */
+function beatPath(tile: number, amp: number) {
+  const x = tile - 26;
+  return `M0 12 H${x} q2 -3 4 0 h3 l2 3 l3 -${amp + 1} l3 ${amp * 2} l2 -${amp - 1} h2 q2 -3 4 0 H${tile}`;
+}
 
 /**
- * A thin neon line instead of a fat bar: each segment is a glowing stroke in its own colour that draws in
- * from the left, with a node where it ends and a bright orb on the last one.
+ * ECG-style stat line: every segment is a heartbeat trace in its severity colour. Heartbeats repeat along the
+ * segment (faster for worse severity) and a faint scan head sweeps the whole line like a patient monitor.
  */
 function GlowLine({ segments, total, label, className = "" }: {
   segments: { key: string; n: number; color: string }[]; total: number; label: string; className?: string;
 }) {
   const parts = segments.filter((p) => p.n > 0);
+  const uid = useId().replace(/:/g, "");
+  const still = useReducedMotion();
   return (
-    <div className={`relative flex h-6 items-center pr-1.5 ${className}`} role="img" aria-label={label}>
+    <div className={`relative flex h-7 items-center overflow-hidden ${className}`} role="img" aria-label={label}>
       <div aria-hidden="true" className="absolute inset-x-0 h-px bg-white/10" />
       <div className="relative flex w-full items-center">
         {parts.map((p, i) => {
-          const last = i === parts.length - 1;
+          const r = RHYTHM[p.key] ?? RHYTHM.suspicious;
+          const pid = `${uid}-${p.key}`;
           return (
-            <motion.span
+            <motion.svg
               key={p.key}
               aria-hidden="true"
-              className="relative flex shrink-0 items-center"
-              style={{ minWidth: 30 }}
+              height="28"
+              className="shrink-0"
+              style={{ filter: `drop-shadow(0 0 3px ${p.color}88)` }}
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(100, (p.n / Math.max(1, total)) * 100)}%` }}
-              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 }}
+              transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1], delay: i * 0.1 }}
             >
-              {/* flat baseline, then one heartbeat (P wave, QRS spike, T wave) at the end of the segment */}
-              <span className="h-[2px] flex-1" style={{ background: p.color, boxShadow: `0 0 8px 0 ${p.color}77` }} />
-              <svg width="30" height="24" viewBox="0 0 30 24" fill="none" className="shrink-0 overflow-visible" style={{ filter: `drop-shadow(0 0 4px ${p.color}99)` }}>
-                <motion.path
-                  d="M0 12 H5 Q7 8 9 12 H12 L14 14 L17 2 L20 22 L22 12 H24 Q26 9 28 12 H30"
-                  stroke={p.color}
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  initial={{ pathLength: 0 }}
-                  animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.9, ease: "easeOut", delay: 0.5 + i * 0.1 }}
-                />
-              </svg>
-              {last && (
-                <span
-                  className="absolute right-0 top-1/2 h-2 w-2 -translate-y-1/2 translate-x-1/2 rounded-full bg-white"
-                  style={{ boxShadow: `0 0 10px 2px ${p.color}aa` }}
-                />
-              )}
-            </motion.span>
+              <defs>
+                <pattern id={pid} width={r.tile} height="28" patternUnits="userSpaceOnUse" y="2">
+                  <path d={beatPath(r.tile, r.amp)} fill="none" stroke={p.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="28" fill={`url(#${pid})`} />
+            </motion.svg>
           );
         })}
+        {/* scan head: a short fading trail with a bright tip, looping left to right */}
+        {!still && parts.length > 0 && (
+          <motion.span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-0 top-0 h-full w-16 -translate-x-full"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.35))", maskImage: "linear-gradient(transparent, #000 30%, #000 70%, transparent)" }}
+            initial={{ left: "0%" }}
+            animate={{ left: "100%" }}
+            transition={{ duration: 3.2, ease: "linear", repeat: Infinity, repeatDelay: 1.2, delay: 1.4 }}
+          >
+            <span className="absolute right-0 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-white" style={{ boxShadow: "0 0 8px 2px rgba(255,255,255,0.7)" }} />
+          </motion.span>
+        )}
       </div>
     </div>
   );
 }
-
-const bucketOf = (f: Finding): Bucket => (f.severity === "critical" ? "critical" : f.severity === "high" ? "high" : "suspicious");
 
 /** Summary number with an icon tile and a soft glow in the severity colour, as in a dashboard stat card. */
 export function KpiCard({ label, value, sub, tone, tile, Icon, glow = "", className = "" }: {
