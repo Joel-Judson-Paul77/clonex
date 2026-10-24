@@ -31,7 +31,7 @@ function SourceImage({ a }: { a: NewsArticle }) {
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={() => setFailed(true)}
-          className="aspect-[16/10] w-full object-cover transition-transform duration-300 hover:scale-[1.03]"
+          className="aspect-[16/10] max-h-72 w-full object-cover transition-transform duration-300 hover:scale-[1.03]"
         />
       </a>
       <p className="mt-1.5 font-mono text-[10px] tracking-tight text-white/50">Image: {a.publisher}. Click to read the article.</p>
