@@ -4,6 +4,11 @@ Brand impersonation monitoring for app stores and social platforms. Kampus.VC ha
 
 **Live demo:** https://clonex-app.vercel.app · **Video walkthrough:** https://clonex-app.vercel.app/demo/CloneX-demo.mp4 (takedown runs in demo mode there: notices go only to the owner's test inbox, never to a platform)
 
+**Digital Risk Protection Telegram Bot--->
+
+
+
+
 You describe your real brand once. CloneX searches for look-alike apps and accounts, explains each detection in plain language with a 0 to 100 score, never flags your own official assets, and lets an analyst send a reviewed takedown notice through an n8n workflow.
 
 ## Round 2: from a list of suspects to an investigation queue
