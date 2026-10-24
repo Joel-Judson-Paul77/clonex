@@ -274,17 +274,3 @@ html[data-theme="light"] .glass-card {
     grid-column: 3;
   }
 }
-
-/* Floating-paths background: one slow transform + opacity loop on the whole layer (compositor-only, so it stays
-   smooth). Disabled for reduced motion. */
-.floating-paths-layer {
-  will-change: transform, opacity;
-  animation: floating-paths-drift 36s ease-in-out infinite alternate;
-}
-@keyframes floating-paths-drift {
-  from { transform: translate3d(-1.5%, -1%, 0) scale(1.06); opacity: 0.7; }
-  to { transform: translate3d(1.5%, 1%, 0) scale(1.1); opacity: 1; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .floating-paths-layer { animation: none; }
-}
