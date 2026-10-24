@@ -4,11 +4,18 @@ import { CrowdCanvas } from "@/components/ui/skiper39";
 import { FlowButton } from "@/components/ui/flow-button";
 import ThemeSwitch from "@/components/ThemeSwitch";
 import { NewsArticles } from "@/components/ui/news-articles";
+import { CountUp } from "@/components/ui/count-up";
 
 // Black line-art crowd (Open Peeps), white-filled, so it stands out against the dark page.
 const CROWD_SRC = "https://cdn.21st.dev/assets/localized/abdb8990a7bef8c2f5af3e45f0a3c969c4b0603fba8be92e81347de4ea4e1ed7.png";
 
 const THREATS = ["Fake apps", "Cloned accounts", "Look-alike domains", "Scam support numbers"];
+
+const STEPS = [
+  { to: 5, unit: "sources", title: "Search", body: "App Store, Google Play, Bluesky, Telegram and look-alike domains, all at once." },
+  { to: 100, prefix: "0 to", unit: "", title: "Score", body: "Each listing gets a 0 to 100 risk score with the reasons behind it." },
+  { to: 1, unit: "click", title: "Act", body: "Review the evidence, then send a takedown notice in one click." },
+];
 
 /** Opening page: states the problem over the crowd, then leads into the CloneX workflow. */
 export default function Landing({ onEnter }: { onEnter: () => void }) {
@@ -61,6 +68,27 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
         <div className="absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-background to-transparent" />
         <CrowdCanvas src={CROWD_SRC} rows={15} cols={7} className="absolute bottom-0 h-full w-full" />
       </div>
+
+      {/* numbers: what one scan covers (figures taken from the product itself) */}
+      <section aria-label="What CloneX does" className="relative z-10 mx-auto w-full max-w-6xl px-5 py-20 sm:py-28">
+        <p className="eyebrow text-center">How it works</p>
+        <ol className="mt-10 grid gap-px overflow-hidden rounded-3xl border border-white/10 bg-white/10 sm:grid-cols-3">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className="flex flex-col gap-5 bg-background p-7 sm:p-9">
+              <span className="num text-sm text-white/40">0{i + 1}</span>
+              <div className="num flex items-baseline gap-2 text-6xl text-white sm:text-7xl">
+                {s.prefix && <span className="text-3xl text-white/45 sm:text-4xl">{s.prefix}</span>}
+                <CountUp to={s.to} digitEffect="slide" duration={1.6} delay={i * 0.15} />
+                <span className="text-2xl text-white/45 sm:text-3xl">{s.unit}</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">{s.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-white/60">{s.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <NewsArticles className="bg-background" />
     </main>
